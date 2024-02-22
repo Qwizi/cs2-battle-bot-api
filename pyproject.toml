@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "discord-cs2-mm"
+version = "0.1.0"
+description = ""
+authors = ["Adrian Ciolek <ciolek.adrian@protonmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+django = "^5.0.2"
+httpx = "^0.26.0"
+psycopg2-binary = "^2.9.9"
+django-prefix-id = "^1.0.0"
+steam = "^1.4.4"
+django-redis = "^5.4.0"
+djangorestframework = "^3.14.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
