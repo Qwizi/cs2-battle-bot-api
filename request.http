@@ -6,7 +6,9 @@ POST http://localhost:8002/api/matches/
 Content-Type: application/json
 
 {
-    "discord_users_ids": ["264857503974555649", "264857503974555649", "264857503974555649"]
+    "discord_users_ids": ["264857503974555649", "264857503974555649", "264857503974555649"],
+    "team1_name": "Virtus Pro",
+    "map_list": ["de_mirage"]
 }
 
 ### Start match

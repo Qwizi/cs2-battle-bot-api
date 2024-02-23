@@ -32,50 +32,53 @@ class MatchViewSet(viewsets.ModelViewSet):
                 return Response({"message": "Discord users cannot be empty"}, status=400)
             try:
                 discord_users_list = [DiscordUser.objects.get(user_id=discord_user) for discord_user in discord_users_ids]
-                players_list = [Player.objects.get(discord_user=discord_user) for discord_user in discord_users_list]
-
-                for player in players_list:
+                players_list = []
+                for discord_user in discord_users_list:
+                    player = Player.objects.get(discord_user=discord_user)
                     if player.steam_user is None:
-                        return Response({"message": f"Player {player.discord_user.username} has no connected steam account"}, status=400) 
+                        return Response({"message": f"Discord user {discord_user.username} has no connected player"}, status=400)
+                    players_list.append({
+                        f"{player.steam_user.steamid64}": player.steam_user.username
+                    })
+                    
                 # create teams
                 random.shuffle(players_list)
 
-                # Split the list of members into two teams
-                players_list_serialized = [PlayerSerializer(player) for player in players_list]
-                players_list_json = [JSONRenderer().render(serializer.data) for serializer in players_list_serialized]
-                num_members = len(players_list_serialized)
+                num_members = len(players_list)
                 middle_index = num_members // 2
-                team1 = players_list_serialized[:middle_index]
-                team2 =  players_list_serialized[middle_index:]
-                team1_data = [serializer.data for serializer in team1]
-                team2_data = [serializer.data for serializer in team2]
-
-                team1_json = [JSONRenderer().render(serializer.data) for serializer in team1]
-                team2_json = [JSONRenderer().render(serializer.data) for serializer in team2]
-
-                # # Create a list of member names for each team
-                # team1_names = [player.discord_user.username for player in team1]
-                # team2_names = [player.discord_user.username for player in team2]
-
-                # team1_steam_ids = [player.steam_user.steamid64 for player in team1]
-                # team2_steam_ids = [player.steam_user.steamid64 for player in team2]
-
-                match_data = {
-                    "team1": team1_json,
-                    "team2": team2_json,
-                    "ct": "team1",
-                    "t": "team2",
-                    "players": players_list_json,
-                    "status": MatchStatus.PENDING,
-                    "knife_round": False,
-                    "knife_team_winner": None,
-                    "knife_team_winner_site": None,
+                team1_name = serializer.validated_data.get("team1_name", "Team 1")
+                team2_name = serializer.validated_data.get("team2_name", "Team 2")
+                map_list = serializer.validated_data.get("map_list", [
+                    "de_mirage",
+                    "de_overpass",
+                    "de_inferno"
+                ])
+                num_maps = len(map_list)
+                team1 = {
+                    "name": team1_name,
+                    "players": players_list[:middle_index]
+                    
                 }
-                json_render = JSONRenderer().render(match_data)
-                print(json_render)
-                cache.set("current_match", json_render, timeout=60*60*24*7)
-                print(cache.get("current_match"))
-                return Response(json_render, status=200)
+                team2 =  {
+                    "name": team2_name,
+                    "players": players_list[middle_index:]
+                }
+
+                data = {
+                    "team1": team1,
+                    "team2": team2,
+                    "map_list": map_list,
+                    "num_maps": num_maps,
+                    "map_sides": [
+                        "team1_ct",
+                        "team2_ct",
+                        "knife"
+                    ],
+                    "clinch_series": True,
+                    "players_per_team": 5,
+                }
+                cache.set("current_match", json.dumps(data), timeout=60*60*24*7)
+                return Response(data, status=201)
             except DiscordUser.DoesNotExist as e:
                 return Response({"message": f"Discord user {e} not exists"}, status=400)
             except Player.DoesNotExist as e:
