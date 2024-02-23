@@ -48,12 +48,12 @@ class MatchViewSet(viewsets.ModelViewSet):
                 middle_index = num_members // 2
                 team1_name = serializer.validated_data.get("team1_name", "Team 1")
                 team2_name = serializer.validated_data.get("team2_name", "Team 2")
-                map_list = serializer.validated_data.get("map_list", [
+                maplist = serializer.validated_data.get("maplist", [
                     "de_mirage",
                     "de_overpass",
                     "de_inferno"
                 ])
-                num_maps = len(map_list)
+                num_maps = len(maplist)
                 team1 = {
                     "name": team1_name,
                     "players": players_list[:middle_index]
@@ -67,7 +67,7 @@ class MatchViewSet(viewsets.ModelViewSet):
                 data = {
                     "team1": team1,
                     "team2": team2,
-                    "map_list": map_list,
+                    "maplist": maplist,
                     "num_maps": num_maps,
                     "map_sides": [
                         "team1_ct",
