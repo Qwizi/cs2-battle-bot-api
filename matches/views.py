@@ -32,14 +32,14 @@ class MatchViewSet(viewsets.ModelViewSet):
                 return Response({"message": "Discord users cannot be empty"}, status=400)
             try:
                 discord_users_list = [DiscordUser.objects.get(user_id=discord_user) for discord_user in discord_users_ids]
-                players_list = []
+                players_list: list[Player] = []
                 for discord_user in discord_users_list:
-                    player = Player.objects.get(discord_user=discord_user)
+                    player: Player = Player.objects.get(discord_user=discord_user)
                     if player.steam_user is None:
                         return Response({"message": f"Discord user {discord_user.username} has no connected player"}, status=400)
-                    players_list.append({
-                        f"{player.steam_user.steamid64}": player.steam_user.username
-                    })
+                    players_list.append(
+                        player
+                    )
                     
                 # create teams
                 random.shuffle(players_list)
@@ -53,15 +53,35 @@ class MatchViewSet(viewsets.ModelViewSet):
                     "de_overpass",
                     "de_inferno"
                 ])
+                team1_players_list = players_list[:middle_index]
+                team2_players_list = players_list[middle_index:]
+
+
+                team1_players = {}
+                for player in team1_players_list:
+                    player_steamid64 = str(player.steam_user.steamid64)  # Assuming player has a steam_user attribute
+                    player_name = player.steam_user.username  # Assuming player has a steam_user attribute
+                    team1_players[player_steamid64] = player_name
+
+                team2_players = {}
+                for player in team2_players_list:
+                    player_steamid64 = str(player.steam_user.steamid64)
+                    player_name = player.steam_user.username
+                    team2_players[player_steamid64] = player_name
+                print(team1_players)
+                # team2_players = {str(player.steam_user.steamid64): player.steam_user.username for player in team2_players_list}
+
+
+
                 num_maps = len(maplist)
                 team1 = {
                     "name": team1_name,
-                    "players": players_list[:middle_index]
+                    "players": team1_players
                     
                 }
                 team2 =  {
                     "name": team2_name,
-                    "players": players_list[middle_index:]
+                    "players": team2_players
                 }
 
                 data = {

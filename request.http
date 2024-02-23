@@ -11,6 +11,17 @@ Content-Type: application/json
     "map_list": ["de_mirage"]
 }
 
+### Create match
+POST http://localhost:8002/api/matches/
+Content-Type: application/json
+
+{
+    "discord_users_ids": ["264857503974555649", "264857503974555649", "264857503974555649"],
+    "team1_name": "Virtus Pro",
+    "maplist": ["de_mirage"]
+}
+
+
 ### Start match
 PUT http://localhost:8002/api/matches/start/
 Content-Type: application/json
