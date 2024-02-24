@@ -1,12 +1,15 @@
 
 import json
+from django.conf import settings
+from rcon.source import Client
 from rest_framework.response import Response
 from django.core.cache import cache
+from discord_cs2_mm.settings import CS2_SERVER_PORT
 from matches.models import Map, Match, MatchStatus
 from rest_framework import viewsets
 from rest_framework.decorators import action
 
-from matches.serializers import CreateMatchSerializer, CurrentMatchSerializer, KnifeRoundWinnerSerializer, MatchSerializer
+from matches.serializers import CreateMatchSerializer, MatchSerializer
 from players.models import DiscordUser, Player, Team
 
 class MatchViewSet(viewsets.ModelViewSet):
@@ -131,8 +134,6 @@ class MatchViewSet(viewsets.ModelViewSet):
                 new_match.maps.set(maps)
                 new_match.save()
 
-                
-
                 current_match_data = {
                     "matchid": new_match.id,
                     "team1": {
@@ -155,6 +156,12 @@ class MatchViewSet(viewsets.ModelViewSet):
                 new_match_serializer = MatchSerializer(new_match)
 
                 cache.set("current_match", json.dumps(current_match_data), timeout=60*60*24*7)
+                current_match_url = f"{settings.HOST_URL}{request.get_full_path()}current/"
+                with Client(settings.CS2_SERVER_IP, int(settings.CS2_SERVER_PORT), passwd=settings.CS2_SERVER_RCON_PASSWORD) as client:
+                    response = client.run(f'matchzy_loadmatch_url "{current_match_url}"')
+
+                    print(response)
+
                 return Response(new_match_serializer.data, status=201)
             except DiscordUser.DoesNotExist as e:
                 return Response({"message": f"Discord user {e} not exists"}, status=400)
@@ -172,12 +179,16 @@ class MatchViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=["POST"])
     def set_teams(self, request, pk=None):
-        match = self.get_object()
-        team1_id = request.data.get("team1_id")
-        team2_id = request.data.get("team2_id")
-        team1 = Team.objects.get(id=team1_id)
-        team2 = Team.objects.get(id=team2_id)
-        match.team1 = team1
-        match.team2 = team2
-        match.save()
-        return Response({"status": "teams set"})
+        try:
+            match = self.get_object()
+            team1_id = request.data.get("team1_id")
+            team2_id = request.data.get("team2_id")
+            team1 = Team.objects.get(id=team1_id)
+            team2 = Team.objects.get(id=team2_id)
+            match.team1 = team1
+            match.team2 = team2
+            match.save()
+        except Team.DoesNotExist as e:
+            return Response({"status": f"Team {e} not exists"}, status=400)
+        else:
+            return Response({"status": "teams set"})

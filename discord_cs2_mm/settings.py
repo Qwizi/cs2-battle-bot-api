@@ -146,3 +146,8 @@ DISCORD_REDIRECT_URI = os.environ.get("DISCORD_REDIRECT_URI", "uri")
 
 STEAM_API_KEY = os.environ.get("STEAM_API_KEY", "key")
 STEAM_REDIRECT_URI = os.environ.get("STEAM_REDIRECT_URI", "uri")
+
+
+CS2_SERVER_IP = os.environ.get("CS2_SERVER_IP", "")
+CS2_SERVER_PORT = os.environ.get("CS2_SERVER_PORT", "")
+CS2_SERVER_RCON_PASSWORD = os.environ.get("CS2_SERVER_RCON_PASSWORD", "")

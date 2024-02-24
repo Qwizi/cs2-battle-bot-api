@@ -14,6 +14,7 @@ django-prefix-id = "^1.0.0"
 steam = "^1.4.4"
 django-redis = "^5.4.0"
 djangorestframework = "^3.14.0"
+rcon = "^2.4.6"
 
 
 [build-system]

@@ -434,6 +434,20 @@ files = [
 ]
 
 [[package]]
+name = "rcon"
+version = "2.4.6"
+description = "An RCON client library."
+optional = false
+python-versions = ">=3.10"
+files = [
+    {file = "rcon-2.4.6-py3-none-any.whl", hash = "sha256:cd7f4f3a6f1ee1786c08c58d46333ca252a9a969e8bb1418ec4cff8747a54d69"},
+    {file = "rcon-2.4.6.tar.gz", hash = "sha256:e89697860e33312d99df8d54408b9d0fae179858b52ae4b8dadb72c978d7c4d2"},
+]
+
+[package.extras]
+gui = ["pygobject", "pygtk"]
+
+[[package]]
 name = "redis"
 version = "5.0.1"
 description = "Python client for Redis database and key-value store"
@@ -572,4 +586,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "d1287e76de26e2fa217fa13b62a0d9c52246d867dd49cd00d2d892bcb8bd057e"
+content-hash = "17cc3bce274738e1eefadd19b015b447c997b3b35c347eab30e3130e6260b6ab"
