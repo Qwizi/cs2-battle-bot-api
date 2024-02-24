@@ -1,3 +1,4 @@
+from enum import unique
 from django.db import models
 from prefix_id import PrefixIDField
 
@@ -11,7 +12,7 @@ class DiscordUser(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"<{self.id} - {self.user_id} - {self.username}>"
+        return f"<{self.username} - {self.user_id} - {self.id}>"
 
 class SteamUser(models.Model):
     id = PrefixIDField(primary_key=True, prefix="steam_user")
@@ -24,7 +25,7 @@ class SteamUser(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"<{self.id} - {self.steamid64} - {self.username}>"
+        return f"<{self.username} - {self.steamid64} - {self.id}>"
 
 class Player(models.Model):
     id = PrefixIDField(primary_key=True, prefix="player")
@@ -34,15 +35,19 @@ class Player(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"<{self.id} - {self.discord_user.username} - {self.steam_user.username}>"
+        return f"<{self.discord_user.username} - {self.steam_user.username} - {self.id}>"
+    
+    def get_player_dict(self):
+        return {str(self.steam_user.steamid64): self.steam_user.username}
     
 class Team(models.Model):
     id = PrefixIDField(primary_key=True, prefix="team")
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
     players = models.ManyToManyField("players.Player", related_name="teams")
-    leader = models.ForeignKey("players.Player", on_delete=models.CASCADE, related_name="team_leader")
+    leader = models.ForeignKey("players.Player", on_delete=models.CASCADE, related_name="team_leader", null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
 
     def __str__(self):
-        return f"<{self.id} - {self.name}>"
+        return f"<{self.name} - {self.id}>"

@@ -52,29 +52,29 @@ class MatchPlayer(models.Model):
         return f"<{self.id} - {self.player.username} - {self.match.id} - {self.team}>"
 
 
-class MatchTeam(models.Model):
-
-    id = PrefixIDField(primary_key=True, prefix="match_team")
-    match = models.ForeignKey("matches.Match", on_delete=models.CASCADE)
-    team = models.ForeignKey(Team, on_delete=models.CASCADE)
-    side = models.CharField(max_length=255, choices=TeamSide.choices, null=True, blank=True)
+class Map(models.Model):
+    id = PrefixIDField(primary_key=True, prefix="map")
+    name = models.CharField(max_length=255)
+    tag = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
+
     def __str__(self):
-            return f"<{self.id} - {self.match.id} - {self.team}>"
+        return f"<{self.name} - {self.tag} - {self.id}>"
+
 
 # Create your models here.
 class Match(models.Model):
-    
-
     id = PrefixIDField(primary_key=True, prefix="match")
     status = models.CharField(max_length=255, choices=MatchStatus.choices, default=MatchStatus.PENDING)
     type = models.CharField(max_length=255, choices=MatchType.choices, default=MatchType.BO1)
-    maps = models.CharField(max_length=255, choices=MatchMap.choices, default=MatchMap.MIRAGE)
-    teams = models.ManyToManyField(Team, through=MatchTeam, related_name="matches")
+    maps = models.ManyToManyField(Map, related_name="matches_maps")
+    team1 = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="matches_team1", null=True)
+    team2 = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="matches_team2", null=True)
+    winner_team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="matches_winner", null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"<{self.id} - {self.status} - {self.type} - {self.map} - {self.winner}>"
+        return f"<{self.team1.name} vs {self.team2.name}- {self.status} - {self.type} - {self.id}>"

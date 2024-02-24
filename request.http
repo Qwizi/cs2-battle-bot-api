@@ -6,9 +6,8 @@ POST https://cs2.sharkservers.pl/api/matches/
 Content-Type: application/json
 
 {
-    "discord_users_ids": ["264857503974555649", "264857503974555649", "264857503974555649"],
-    "team1_name": "Virtus Pro",
-    "map_list": ["de_mirage"]
+    "discord_users_ids": ["264857503974555649",],
+    "maplist": ["de_mirage"]
 }
 
 ### Create match
@@ -16,9 +15,11 @@ POST http://localhost:8002/api/matches/
 Content-Type: application/json
 
 {
-    "discord_users_ids": ["264857503974555649", "264857503974555649", "264857503974555649"],
-    "team1_name": "Virtus Pro",
-    "maplist": ["de_mirage"]
+    "discord_users_ids": ["264857503974555649", "495214448361996298"],
+    "maplist": ["de_mirage"],
+    "shuffle_players": false,
+    "team1_id": "team_LxsSFJG6Mifru5xqsifbQ",
+    "team2_id": "team_42qFXTw9xRH9dpI8QRz5Pu"
 }
 
 
@@ -43,4 +44,17 @@ Content-Type: application/json
 {
     "team_one_id": "1",
     "team_two_id": "2",
+}
+
+### GET TEAMS
+GET http://localhost:8002/api/teams/
+
+
+### ADD player to team
+
+POST http://localhost:8002/api/teams/team_LxsSFJG6Mifru5xqsifbQ/add_player/
+Content-Type: application/json
+
+{
+    "player_id": "player_tRn0J1MGrlgzWhQdT3CAu"
 }
