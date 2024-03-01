@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "discord-cs2-mm"
+name = "cs2-battle-bot"
 version = "0.1.0"
 description = ""
 authors = ["Adrian Ciolek <ciolek.adrian@protonmail.com>"]
@@ -14,6 +14,7 @@ django-prefix-id = "^1.0.0"
 steam = "^1.4.4"
 django-redis = "^5.4.0"
 djangorestframework = "^3.14.0"
+djangorestframework-api-key = "==2.*"
 
 
 [build-system]
