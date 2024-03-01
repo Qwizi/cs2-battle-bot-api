@@ -23,15 +23,9 @@ class MatchViewSet(viewsets.ModelViewSet):
     queryset = Match.objects.all()
     serializer_class = MatchSerializer
 
-    def get_serializer_class(self):
-        if self.action == "list":
-            return MatchSerializer
-        if self.action == "create":
-            return CreateMatchSerializer
-
     def publish_event(self, event, data):
         redis_client = redis.StrictRedis(host="redis", port=6379, db=0)
-        redis_client.publish(event, json.dumps(data))
+        redis_client.publish("event.going_live", json.dumps(data))
 
     def __divide_players(
         self, players_list: list[Player]
@@ -84,7 +78,7 @@ class MatchViewSet(viewsets.ModelViewSet):
         return team1, team2
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer_class()(data=request.data)
+        serializer = CreateMatchSerializer(data=request.data)
         if serializer.is_valid():
             discord_users_ids = serializer.validated_data.get("discord_users_ids")
             team1_id = serializer.validated_data.get("team1_id", None)
@@ -274,6 +268,8 @@ class MatchViewSet(viewsets.ModelViewSet):
                 redis_event = f"event.{MatchEventEnum.MAP_PICKED.value}"
             case MatchEventEnum.MAP_VETOED:
                 redis_event = f"event.{MatchEventEnum.MAP_VETOED.value}"
+            case MatchEventEnum.ROUND_END:
+                redis_event = f"event.{MatchEventEnum.ROUND_END.value}"
             case MatchEventEnum.GOING_LIVE:
                 going_live_serializer = MatchEventGoingLiveSerializer(data=request.data)
                 if not going_live_serializer.is_valid():
@@ -282,4 +278,5 @@ class MatchViewSet(viewsets.ModelViewSet):
                 redis_event = f"event.{MatchEventEnum.GOING_LIVE.value}"
 
         self.publish_event(redis_event, data)
+        print(f"Published event: {redis_event} with data: {data}")
         return Response({"event": redis_event, "data": data}, status=200)
