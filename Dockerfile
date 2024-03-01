@@ -13,7 +13,7 @@ RUN poetry config virtualenvs.create false
 #RUN poetry config installer.no-binary cryptography
 
 # Copy the project files for dependency installation
-COPY ../pyproject.toml ../poetry.lock /code/
+COPY ./pyproject.toml ./poetry.lock /code/
 
 # Install project dependencies using Poetry
 RUN poetry install --no-interaction --no-ansi

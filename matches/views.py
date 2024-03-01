@@ -1,245 +1,285 @@
-import io
 import json
-import random
-from rest_framework.decorators import api_view
+import redis
 from rest_framework.response import Response
 from django.core.cache import cache
-from matches.models import Match, MatchStatus
+from matches.models import Map, Match, MatchStatus
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.renderers import JSONRenderer
 
-from matches.serializers import CreateMatchSerializer, KnifeRoundWinnerSerializer, MatchSerializer
-from players.models import DiscordUser, Player
-from players.serializers import PlayerSerializer
+from matches.serializers import (
+    CreateMatchSerializer,
+    MatchEventEnum,
+    MatchEventGoingLiveSerializer,
+    MatchEventMapResultSerializer,
+    MatchEventSerializer,
+    MatchEventSeriesEndSerializer,
+    MatchEventSeriesStartSerializer,
+    MatchSerializer,
+)
+from players.models import DiscordUser, Player, Team
+
 
 class MatchViewSet(viewsets.ModelViewSet):
     queryset = Match.objects.all()
     serializer_class = MatchSerializer
 
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action == "list":
             return MatchSerializer
-        if self.action == 'create':
+        if self.action == "create":
             return CreateMatchSerializer
+
+    def publish_event(self, event, data):
+        redis_client = redis.StrictRedis(host="redis", port=6379, db=0)
+        redis_client.publish(event, json.dumps(data))
+
+    def __divide_players(
+        self, players_list: list[Player]
+    ) -> tuple[list[Player], list[Player]]:
+        """
+        Divide a list of players into two lists.
+
+        Args:
+        -----
+            players_list (list[Player]): List of players.
+
+        Returns:
+        --------
+            tuple[list[Player], list[Player]]: Tuple with two lists of players.
+
+        """
+        num_members = len(players_list)
+        middle_index = num_members // 2
+        return players_list[:middle_index], players_list[middle_index:]
+
+    def __create_default_teams(
+        self, team1_name: str, team2_name: str, players_list: list[Player]
+    ) -> tuple[Team, Team]:
+        """
+        Create two teams with the given players.
+
+        Args:
+        -----
+            team1_name (str): Name of the first team.
+            team2_name (str): Name of the second team.
+            team1_players_list (list[Player]): List of players for the first team.
+            team2_players_list (list[Player]): List of players for the second team.
+
+        Returns:
+        --------
+            tuple[Team, Team]: Tuple with two teams.
+
+        """
+        team1 = Team.objects.get_or_create(name=team1_name)[0]
+        team2 = Team.objects.get_or_create(name=team2_name)[0]
+        team1_players_list, team2_players_list = self.__divide_players(players_list)
+
+        team1.players.set(team1_players_list)
+        team1.leader = team1_players_list[0]
+        team1.save()
+
+        team2.players.set(team2_players_list)
+        team2.leader = team2_players_list[0]
+        team2.save()
+        return team1, team2
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer_class()(data=request.data)
         if serializer.is_valid():
             discord_users_ids = serializer.validated_data.get("discord_users_ids")
-            print(discord_users_ids)
+            team1_id = serializer.validated_data.get("team1_id", None)
+            team2_id = serializer.validated_data.get("team2_id", None)
+            shuffle_players = serializer.validated_data.get("shuffle_players", True)
+            match_type = serializer.validated_data.get("match_type", "BO1")
+            players_per_team = serializer.validated_data.get("players_per_team", 5)
+            clinch_series = serializer.validated_data.get("clinch_series", False)
+            map_sides = serializer.validated_data.get(
+                "map_sides", ["knife", "team1_ct", "team2_ct"]
+            )
+            maplist = serializer.validated_data.get("maplist", None)
+            cvars = serializer.validated_data.get("cvars", None)
+            # Remove duplicates from discord_users_ids
+            discord_users_ids = list(set(discord_users_ids))
             if not discord_users_ids:
-                return Response({"message": "Discord users cannot be empty"}, status=400)
+                return Response(
+                    {"message": "Discord users cannot be empty"}, status=400
+                )
             try:
-                discord_users_list = [DiscordUser.objects.get(user_id=discord_user) for discord_user in discord_users_ids]
+                discord_users_list = [
+                    DiscordUser.objects.get(user_id=discord_user)
+                    for discord_user in discord_users_ids
+                ]
                 players_list: list[Player] = []
                 for discord_user in discord_users_list:
                     player: Player = Player.objects.get(discord_user=discord_user)
                     if player.steam_user is None:
-                        return Response({"message": f"Discord user {discord_user.username} has no connected player"}, status=400)
-                    players_list.append(
-                        player
+                        return Response(
+                            {
+                                "message": f"Discord user {discord_user.username} has no connected player"
+                            },
+                            status=400,
+                        )
+                    players_list.append(player)
+
+                team1, team2 = None, None
+                team1_players, team2_players = {}, {}
+
+                if len(players_list) < 2:
+                    return Response(
+                        {"message": "At least 2 players are required"}, status=400
                     )
-                    
-                # create teams
-                random.shuffle(players_list)
 
-                num_members = len(players_list)
-                middle_index = num_members // 2
-                team1_name = serializer.validated_data.get("team1_name", "Team 1")
-                team2_name = serializer.validated_data.get("team2_name", "Team 2")
-                maplist = serializer.validated_data.get("maplist", [
-                    "de_mirage",
-                    "de_overpass",
-                    "de_inferno"
-                ])
-                team1_players_list = players_list[:middle_index]
-                team2_players_list = players_list[middle_index:]
-
-
-                team1_players = {}
-                for player in team1_players_list:
-                    player_steamid64 = str(player.steam_user.steamid64)  # Assuming player has a steam_user attribute
-                    player_name = player.steam_user.username  # Assuming player has a steam_user attribute
-                    team1_players[player_steamid64] = player_name
-
-                team2_players = {}
-                for player in team2_players_list:
-                    player_steamid64 = str(player.steam_user.steamid64)
-                    player_name = player.steam_user.username
-                    team2_players[player_steamid64] = player_name
-                print(team1_players)
-                # team2_players = {str(player.steam_user.steamid64): player.steam_user.username for player in team2_players_list}
-
-
+                if shuffle_players:
+                    team1, team2 = self.__create_default_teams(
+                        "Team 1", "Team 2", players_list
+                    )
+                    team1_players = {
+                        str(player.steam_user.steamid64): player.steam_user.username
+                        for player in team1.players.all()
+                    }
+                    team2_players = {
+                        str(player.steam_user.steamid64): player.steam_user.username
+                        for player in team2.players.all()
+                    }
+                else:
+                    if not team1_id or not team2_id:
+                        return Response(
+                            {"message": "team1_id and team2_id ids are required"},
+                            status=400,
+                        )
+                    try:
+                        team1 = Team.objects.get(id=team1_id)
+                        team2 = Team.objects.get(id=team2_id)
+                        players_ids = [player.id for player in players_list]
+                        team1_players = {
+                            str(player.steam_user.steamid64): player.steam_user.username
+                            for player in team1.players.filter(pk__in=players_ids)
+                        }
+                        team2_players = {
+                            str(player.steam_user.steamid64): player.steam_user.username
+                            for player in team2.players.filter(pk__in=players_ids)
+                        }
+                    except Team.DoesNotExist as e:
+                        return Response({"message": f"Team {e} not exists"}, status=400)
+                for map in maplist:
+                    if map not in Map.objects.filter().values_list("tag", flat=True):
+                        return Response(
+                            {"message": f"Map {map} not exists"}, status=400
+                        )
 
                 num_maps = len(maplist)
-                team1 = {
-                    "name": team1_name,
-                    "players": team1_players
-                    
-                }
-                team2 =  {
-                    "name": team2_name,
-                    "players": team2_players
-                }
+                maps = Map.objects.filter(tag__in=maplist)
 
-                data = {
-                    "team1": team1,
-                    "team2": team2,
-                    "maplist": maplist,
+                new_match = Match.objects.create(
+                    status=MatchStatus.PENDING,
+                    type=match_type,
+                    team1=team1,
+                    team2=team2,
+                )
+
+                new_match.maps.set(maps)
+                new_match.save()
+
+                current_match_data = {
+                    "matchid": new_match.id,
+                    "team1": {"name": team1.name, "players": team1_players},
+                    "team2": {"name": team2.name, "players": team2_players},
                     "num_maps": num_maps,
-                    "map_sides": [
-                        "team1_ct",
-                        "team2_ct",
-                        "knife"
-                    ],
-                    "clinch_series": True,
-                    "players_per_team": 5,
+                    "maplist": maplist,
+                    "map_sides": map_sides,
+                    "clinch_series": clinch_series,
+                    "players_per_team": players_per_team,
+                    "cvars": cvars,
                 }
-                cache.set("current_match", json.dumps(data), timeout=60*60*24*7)
-                return Response(data, status=201)
+                new_match_serializer = MatchSerializer(new_match)
+
+                cache.set(
+                    "current_match",
+                    json.dumps(current_match_data),
+                    timeout=60 * 60 * 24 * 7,
+                )
+
+                return Response(new_match_serializer.data, status=201)
             except DiscordUser.DoesNotExist as e:
                 return Response({"message": f"Discord user {e} not exists"}, status=400)
             except Player.DoesNotExist as e:
                 return Response({"message": f"Player {e} not exists"}, status=400)
         else:
             return Response(serializer.errors, status=400)
+
     @action(detail=False, methods=["GET"])
     def current(self, request):
         match_data = cache.get("current_match")
         if not match_data:
             return Response({"message": "No current match"}, status=404)
         return Response(json.loads(match_data), status=200)
-    
-    @action(detail=False, methods=["PUT"])
-    def start_knife_round(self, request):
-        match_data = cache.get("current_match")
-        if not match_data:
-            return Response({"message": "No current match"}, status=404)
-        match_data = json.loads(match_data)
-        match_data["knife_round"] = True
-        cache.set("current_match", json.dumps(match_data), timeout=60*60*24*7)
-        return Response({"message": "Knife round started"}, status=200)
-    
-    @action(detail=False, methods=["PUT"])
-    def end_knife_round(self, request):
-        serializer = KnifeRoundWinnerSerializer(data=request.data)
-        if serializer.is_valid():
-            match_data = cache.get("current_match")
-            if not match_data:
-                return Response({"message": "No current match"}, status=404)
-            match_data = json.loads(match_data)
-            match_data["knife_round"] = False
-            match_data["knife_team_winner"] = "team1" if serializer.validated_data.get("winner") == "ct" else "team2"
-            match_data["knife_team_winner_site"] = serializer.validated_data.get("site")
-            if match_data["knife_team_winner"] == "team1" and match_data["knife_team_winner_site"] == "ct":
-                match_data["ct"] = "team1"
-                match_data["t"] = "team2"
-            elif match_data["knife_team_winner"] == "team1" and match_data["knife_team_winner_site"] == "t":
-                match_data["ct"] = "team2"
-                match_data["t"] = "team1"
-            elif match_data["knife_team_winner"] == "team2" and match_data["knife_team_winner_site"] == "ct":
-                match_data["ct"] = "team2"
-                match_data["t"] = "team1"
-            elif match_data["knife_team_winner"] == "team2" and match_data["knife_team_winner_site"] == "t":
-                match_data["ct"] = "team1"
-                match_data["t"] = "team2"
-            cache.set("current_match", json.dumps(match_data), timeout=60*60*24*7)
-            return Response({"message": "Knife round ended"}, status=200)
+
+    @action(detail=True, methods=["POST"])
+    def set_teams(self, request, pk=None):
+        try:
+            match = self.get_object()
+            team1_id = request.data.get("team1_id")
+            team2_id = request.data.get("team2_id")
+            team1 = Team.objects.get(id=team1_id)
+            team2 = Team.objects.get(id=team2_id)
+            match.team1 = team1
+            match.team2 = team2
+            match.save()
+        except Team.DoesNotExist as e:
+            return Response({"status": f"Team {e} not exists"}, status=400)
         else:
-            return Response(serializer.errors, status=400)
+            return Response({"status": "teams set"})
 
-    @action(detail=False, methods=["PUT"])
-    def start(self, request):
-        match_data = cache.get("current_match")
-        if not match_data:
-            return Response({"message": "No current match"}, status=404)
-        match_data = json.loads(match_data)
-        match_data["status"] = MatchStatus.IN_PROGRESS
-        cache.set("current_match", json.dumps(match_data), timeout=60*60*24*7)
-        return Response({"message": "Match started"}, status=200)
-    
-    @action(detail=False, methods=["PUT"])
-    def end(self, request):
-        match_data = cache.get("current_match")
-        if not match_data:
-            return Response({"message": "No current match"}, status=404)
-        match_data = json.loads(match_data)
-        match_data["status"] = MatchStatus.FINISHED
-        cache.set("current_match", json.dumps(match_data), timeout=60*60*24*7)
-        return Response({"message": "Match ended"}, status=200)
-    
-    @action(detail=False, methods=["PUT"])
-    def cancel(self, request):
-        match_data = cache.get("current_match")
-        if not match_data:
-            return Response({"message": "No current match"}, status=404)
-        match_data = json.loads(match_data)
-        match_data["status"] = MatchStatus.CANCELLED
-        cache.set("current_match", json.dumps(match_data), timeout=60*60*24*7)
-        return Response({"message": "Match cancelled"}, status=200)
-        
-    # @action(detail=True, methods=["POST"])
-    # def ban(self, request, pk=None):
-    #     map_name = request.data.get("map_name")
-    #     team = request.data.get("team")
-    #     if not pk or not map_name:
-    #         return Response({"message": "Invalid data."}, status=400)
-    #     if not Match.objects.filter(id=pk).exists():
-    #         return Response({"message": "Match not found."}, status=404)
-    #     if not cache.get(f"match:{pk}"):
-    #         return Response({"message": "Match not found."}, status=404)
-    #     match_data = json.loads(cache.get(f"match:{pk}"))
-    #     if map_name in match_data["banned_maps"]["ct"] or map_name in match_data["banned_maps"]["t"]:
-    #         return Response({"message": "Map already banned."}, status=400)
-    #     match_data["banned_maps"][team].append(map_name)
-    #     match_data_cache = cache.set(f"match:{pk}", json.dumps(match_data), timeout=60*60*24*7)
-    #     return Response({"message": "Map banned."}, status=200)
-    
-    # @action(detail=True, methods=["GET"])
-    # def cache(self, request, pk=None):
-    #     if not pk:
-    #         return Response({"message": "Invalid data."}, status=400)
-    #     if not Match.objects.filter(id=pk).exists():
-    #         return Response({"message": "Match not found."}, status=404)
-    #     if not cache.get(f"match:{pk}"):
-    #         return Response({"message": "Match not found."}, status=404)
-    #     match_data = json.loads(cache.get(f"match:{pk}"))
-    #     return Response(match_data, status=200)
+    @action(detail=False, methods=["POST"])
+    def webhook(self, request):
+        match_event_serializer = MatchEventSerializer(data=request.data)
+        if not match_event_serializer.is_valid():
+            return Response(match_event_serializer.errors, status=400)
+        match_id = match_event_serializer.validated_data.get("matchid")
+        try:
+            match = Match.objects.get(
+                id=match_event_serializer.validated_data.get("matchid")
+            )
+        except Match.DoesNotExist:
+            return Response(
+                {"status": f"Match with id {match_id} not exists"}, status=400
+            )
+        data = None
+        redis_event = None
+        match match_event_serializer.validated_data.get("event"):
+            case MatchEventEnum.SERIES_START:
+                series_start_serializer = MatchEventSeriesStartSerializer(
+                    data=request.data
+                )
+                if not series_start_serializer.is_valid():
+                    return Response(series_start_serializer.errors, status=400)
+                data = series_start_serializer.validated_data
+                redis_event = f"event.{MatchEventEnum.SERIES_START.value}"
+            case MatchEventEnum.SERIES_END:
+                series_end_serializer = MatchEventSeriesEndSerializer(data=request.data)
+                if not series_end_serializer.is_valid():
+                    return Response(series_end_serializer.errors, status=400)
+                data = series_end_serializer.validated_data
+                redis_event = f"event.{MatchEventEnum.SERIES_END.value}"
 
-# @api_view(["POST"])
-# def create_match(request):
-#     # Create match logic
+            case MatchEventEnum.MAP_RESULT:
+                map_result_serializer = MatchEventMapResultSerializer(data=request.data)
+                if not map_result_serializer.is_valid():
+                    return Response(map_result_serializer.errors, status=400)
+                data = map_result_serializer.validated_data
+                redis_event = f"event.{MatchEventEnum.MAP_RESULT.value}"
+            case MatchEventEnum.SIDE_PICKED:
+                redis_event = f"event.{MatchEventEnum.SIDE_PICKED.value}"
+            case MatchEventEnum.MAP_PICKED:
+                redis_event = f"event.{MatchEventEnum.MAP_PICKED.value}"
+            case MatchEventEnum.MAP_VETOED:
+                redis_event = f"event.{MatchEventEnum.MAP_VETOED.value}"
+            case MatchEventEnum.GOING_LIVE:
+                going_live_serializer = MatchEventGoingLiveSerializer(data=request.data)
+                if not going_live_serializer.is_valid():
+                    return Response(going_live_serializer.errors, status=400)
+                data = going_live_serializer.validated_data
+                redis_event = f"event.{MatchEventEnum.GOING_LIVE.value}"
 
-#     new_match = Match.objects.create(
-#         status="pending",
-#         type="competitive",
-#         map="unknown",
-#         winner="pending"
-#     )
-#     match_data = {
-#         "banned_maps": [],
-#     }
-#     match_data_cache = cache.set(f"match:{new_match.id}", json.dumps(match_data), timeout=60*60*24*7)
-#     print(cache.get(f"match:{new_match.id}"))
-#     return Response({"message": "Match created."}, status=201)
-
-# @api_view(["POST"])
-# def ban_map(request):
-#     # Ban map logic
-#     match_id = request.data.get("match_id")
-#     map_name = request.data.get("map_name")
-#     if not match_id or not map_name:
-#         return Response({"message": "Invalid data."}, status=400)
-#     if not Match.objects.filter(id=match_id).exists():
-#         return Response({"message": "Match not found."}, status=404)
-#     if not cache.get(f"match:{match_id}"):
-#         return Response({"message": "Match not found."}, status=404)
-#     match_data = json.loads(cache.get(f"match:{match_id}"))
-#     if map_name in match_data["banned_maps"]:
-#         return Response({"message": "Map already banned."}, status=400)
-#     match_data["banned_maps"].append(map_name)
-#     match_data_cache = cache.set(f"match:{match_id}", json.dumps(match_data), timeout=60*60*24*7)
-#     print(cache.get(f"match:{match_id}"))
-#     return Response({"message": "Map banned."}, status=200)
+        self.publish_event(redis_event, data)
+        return Response({"event": redis_event, "data": data}, status=200)

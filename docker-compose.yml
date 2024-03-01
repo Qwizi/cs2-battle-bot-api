@@ -1,7 +1,7 @@
 services:
   app:
     build: ./
-    container_name: discord_cs2_mm_app
+    container_name: cs2_battle_bot_api
     # command: gunicorn tf2_api.wsgi:application --bind 0.0.0.0:8000 --reload
     command: python manage.py runserver 0.0.0.0:8000
     ports:
@@ -14,10 +14,10 @@ services:
     depends_on:
       - db
     networks:
-      - discord-cs2-mm-network
+      - cs2-battle-bot-network
   db:
     image: postgres:15.1
-    container_name: discord_cs2_mm_db
+    container_name: cs2_battle_bot_db
     environment:
       - POSTGRES_DB=cs2_db
       - POSTGRES_USER=cs2_user
@@ -28,18 +28,18 @@ services:
     healthcheck:
       test: "exit 0"
     networks:
-      - discord-cs2-mm-network
+      - cs2-battle-bot-network
   redis:
     image: "redis:alpine"
-    container_name: discord_cs2_mm_redis
+    container_name: cs2_battle_bot_redis
     restart: always
     expose:
       - "6379:6379"
     networks:
-      - discord-cs2-mm-network
+      - cs2-battle-bot-network
     healthcheck:
       test: "exit 1"
 
 networks:
-  discord-cs2-mm-network:
+  cs2-battle-bot-network:
     external: true
