@@ -210,8 +210,9 @@ class MatchViewSet(viewsets.ModelViewSet):
                     "map_sides": map_sides,
                     "clinch_series": clinch_series,
                     "players_per_team": players_per_team,
-                    "cvars": cvars,
                 }
+                if cvars:
+                    current_match_data["cvars"] = cvars
                 new_match_serializer = MatchSerializer(new_match)
 
                 cache.set(
