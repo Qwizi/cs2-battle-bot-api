@@ -108,8 +108,6 @@ class MatchEventSerializer(serializers.Serializer):
 
 class MatchEventGoingLiveSerializer(MatchEventSerializer):
     map_number = serializers.IntegerField(required=True)
-    team1 = MatchTeamWrapperSerializer(required=True)
-    team2 = MatchTeamWrapperSerializer(required=True)
 
 
 class MatchEventSeriesEndSerializer(MatchEventSerializer):
