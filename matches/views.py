@@ -265,7 +265,7 @@ class MatchViewSet(viewsets.ModelViewSet):
                 {"message": f"Match with id {match_id} not exists"}, status=400
             )
         load_match_command = "matchzy_loadmatch_url"
-        match_url = f'"{settings.HOST_URL}/matches/current/"'
+        match_url = f'"{settings.HOST_URL}/api/matches/current/"'
         api_key_header = '"X-Api-Key"'
         api_key = f'"{settings.API_KEY}"'
         self.__send_rcon_command(load_match_command, match_url, api_key_header, api_key)
