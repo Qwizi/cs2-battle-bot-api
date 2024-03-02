@@ -265,10 +265,30 @@ class MatchViewSet(viewsets.ModelViewSet):
             return Response(
                 {"message": f"Match with id {match_id} not exists"}, status=400
             )
-        load_match_command = "matchzy_loadmatch_url"
-        match_url = f'"{settings.HOST_URL}/api/matches/current/"'
         api_key_header = '"X-Api-Key"'
         api_key = f'"{settings.API_KEY}"'
+        webhook_url = f'"{settings.HOST_URL}/api/matches/webhook/"'
+
+        remote_log_url_command = "matchzy_remote_log_url"
+        remote_log_url_header_key_command = "matchzy_remote_log_header_key"
+        remote_log_url_header_value_command = "matchzy_remote_log_header_value"
+        webhook_header_key = api_key_header
+        webhook_header_value = api_key
+        self.__send_rcon_command(
+            remote_log_url_command,
+            webhook_url,
+        )
+        self.__send_rcon_command(
+            remote_log_url_header_key_command,
+            webhook_header_key,
+        )
+        self.__send_rcon_command(
+            remote_log_url_header_value_command,
+            webhook_header_value,
+        )
+        load_match_command = "matchzy_loadmatch_url"
+        match_url = f'"{settings.HOST_URL}/api/matches/current/"'
+
         self.__send_rcon_command(load_match_command, match_url, api_key_header, api_key)
         return Response({"status": "match config loaded"})
 
