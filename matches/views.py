@@ -1,5 +1,9 @@
 import json
+from django.conf import settings
+from rcon import EmptyResponse, SessionTimeout, WrongPassword
 import redis
+from rcon.source import Client
+
 from rest_framework.response import Response
 from django.core.cache import cache
 from matches.models import Map, Match, MatchStatus
@@ -76,6 +80,30 @@ class MatchViewSet(viewsets.ModelViewSet):
         team2.leader = team2_players_list[0]
         team2.save()
         return team1, team2
+
+    def __send_rcon_command(self, command: str, *args):
+        """
+        Send an RCON command to the server.
+
+        Args:
+        -----
+            command (str): RCON command.
+
+        Returns:
+        --------
+            None
+
+        """
+        try:
+            with Client(
+                settings.RCON_HOST,
+                int(settings.RCON_PORT),
+                passwd=settings.RCON_PASSWORD,
+            ) as client:
+                return client.run(command, *args)
+        except (EmptyResponse, SessionTimeout, WrongPassword) as e:
+            print(f"Error sending RCON command: {e}")
+            return None
 
     def create(self, request, *args, **kwargs):
         serializer = CreateMatchSerializer(data=request.data)
@@ -165,7 +193,6 @@ class MatchViewSet(viewsets.ModelViewSet):
                 maps = Map.objects.filter(tag__in=maplist)
 
                 new_match = Match.objects.create(
-                    status=MatchStatus.PENDING,
                     type=match_type,
                     team1=team1,
                     team2=team2,
@@ -220,9 +247,29 @@ class MatchViewSet(viewsets.ModelViewSet):
             match.team2 = team2
             match.save()
         except Team.DoesNotExist as e:
-            return Response({"status": f"Team {e} not exists"}, status=400)
+            return Response({"message": f"Team {e} not exists"}, status=400)
         else:
-            return Response({"status": "teams set"})
+            return Response({"message": "teams set"})
+
+    @action(detail=False, methods=["POST"])
+    def load(self, request):
+        match_data = cache.get("current_match")
+        if not match_data:
+            return Response({"message": "No current match"}, status=404)
+        match = json.loads(match_data)
+        match_id = match.get("matchid")
+        try:
+            match = Match.objects.get(id=match_id)
+        except Match.DoesNotExist:
+            return Response(
+                {"message": f"Match with id {match_id} not exists"}, status=400
+            )
+        load_match_command = "matchzy_loadmatch_url"
+        match_url = f'"{settings.HOST_URL}/matches/current/"'
+        api_key_header = '"X-Api-Key"'
+        api_key = f'"{settings.API_KEY}"'
+        self.__send_rcon_command(load_match_command, match_url, api_key_header, api_key)
+        return Response({"status": "match config loaded"})
 
     @action(detail=False, methods=["POST"])
     def webhook(self, request):
@@ -248,12 +295,16 @@ class MatchViewSet(viewsets.ModelViewSet):
                 if not series_start_serializer.is_valid():
                     return Response(series_start_serializer.errors, status=400)
                 data = series_start_serializer.validated_data
+                match.status = MatchStatus.STARTED
+                match.save()
                 redis_event = f"event.{MatchEventEnum.SERIES_START.value}"
             case MatchEventEnum.SERIES_END:
                 series_end_serializer = MatchEventSeriesEndSerializer(data=request.data)
                 if not series_end_serializer.is_valid():
                     return Response(series_end_serializer.errors, status=400)
                 data = series_end_serializer.validated_data
+                match.status = MatchStatus.FINISHED
+                match.save()
                 redis_event = f"event.{MatchEventEnum.SERIES_END.value}"
 
             case MatchEventEnum.MAP_RESULT:
@@ -275,6 +326,8 @@ class MatchViewSet(viewsets.ModelViewSet):
                 if not going_live_serializer.is_valid():
                     return Response(going_live_serializer.errors, status=400)
                 data = going_live_serializer.validated_data
+                match.status = MatchStatus.LIVE
+                match.save()
                 redis_event = f"event.{MatchEventEnum.GOING_LIVE.value}"
 
         self.publish_event(redis_event, data)

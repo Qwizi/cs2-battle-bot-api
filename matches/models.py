@@ -1,3 +1,4 @@
+from token import STAR
 from django.db import models
 from prefix_id import PrefixIDField
 
@@ -5,10 +6,10 @@ from players.models import Team
 
 
 class MatchStatus(models.TextChoices):
-    PENDING = "PENDING"
-    IN_PROGRESS = "IN_PROGRESS"
+    CREATED = "CREATED"
+    STARTED = "STARTED"
+    LIVE = "LIVE"
     FINISHED = "FINISHED"
-    CANCELLED = "CANCELLED"
 
 
 class MatchType(models.TextChoices):
@@ -47,7 +48,7 @@ class Map(models.Model):
 # Create your models here.
 class Match(models.Model):
     status = models.CharField(
-        max_length=255, choices=MatchStatus.choices, default=MatchStatus.PENDING
+        max_length=255, choices=MatchStatus.choices, default=MatchStatus.CREATED
     )
     type = models.CharField(
         max_length=255, choices=MatchType.choices, default=MatchType.BO1
@@ -66,4 +67,4 @@ class Match(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"<{self.team1.name} vs {self.team2.name}- {self.status} - {self.type} - {self.id}>"
+        return f"<{self.team1.name} vs {self.team2.name}- {self.status} - {self.type} - {self.pk}>"

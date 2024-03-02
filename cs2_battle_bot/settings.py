@@ -160,3 +160,9 @@ DISCORD_REDIRECT_URI = os.environ.get("DISCORD_REDIRECT_URI", "uri")
 
 STEAM_API_KEY = os.environ.get("STEAM_API_KEY", "key")
 STEAM_REDIRECT_URI = os.environ.get("STEAM_REDIRECT_URI", "uri")
+
+RCON_HOST = os.environ.get("RCON_HOST", "localhost")
+RCON_PORT = os.environ.get("RCON_PORT", 27015)
+RCON_PASSWORD = os.environ.get("RCON_PASSWORD", "password")
+
+API_KEY = os.environ.get("API_KEY", "key")
