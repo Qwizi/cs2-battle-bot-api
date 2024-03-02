@@ -30,6 +30,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+CSRF_TRUSTED_ORIGINS = ["https://cs2-beta.sharkservers.pl"]
 
 # Application definition
 
