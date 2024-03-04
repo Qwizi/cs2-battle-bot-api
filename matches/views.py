@@ -1,5 +1,6 @@
 import json
 from random import shuffle
+from time import sleep
 from django.conf import settings
 from rcon import EmptyResponse, SessionTimeout, WrongPassword
 import redis
@@ -289,7 +290,8 @@ class MatchViewSet(viewsets.ModelViewSet):
         api_key = f'"{settings.API_KEY}"'
         load_match_command = "matchzy_loadmatch_url"
         match_url = f'"{settings.HOST_URL}/api/matches/current/"'
-
+        response = self.__send_rcon_command("css_endmatch")
+        sleep(5)
         self.__send_rcon_command(load_match_command, match_url, api_key_header, api_key)
         return Response({"status": "match config loaded"})
 
