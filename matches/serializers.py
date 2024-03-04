@@ -87,7 +87,7 @@ class CreateMatchSerializer(serializers.Serializer):
             choices=["team1_ct", "team2_ct", "team1_t", "team2_t", "knife"]
         ),
         required=False,
-        default=["knife", "team1_ct", "team2_ct"],
+        default=["knife", "knife", "knife"],
     )
     # maplist = serializers.ListField(
     #     child=serializers.CharField(required=False), required=True

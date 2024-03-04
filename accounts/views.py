@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import HttpResponsePermanentRedirect, JsonResponse
 from django.shortcuts import redirect, render
 
 from accounts.auth import DiscordAuthService, SteamAuthService
@@ -70,5 +70,9 @@ def success(request):
     return render(request, "accounts/success.html")
 
 
+class CustomSchemeRedirect(HttpResponsePermanentRedirect):
+    allowed_schemes = ["steam"]
+
+
 def join(request):
-    return redirect("steam://connect/146.59.53.13:27015/changeme")
+    return CustomSchemeRedirect("steam://connect/146.59.53.13:27015/changeme")
