@@ -45,6 +45,28 @@ class Map(models.Model):
         return f"<{self.name} - {self.tag} - {self.id}>"
 
 
+class MatchMapBan(models.Model):
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="map_bans")
+    map = models.ForeignKey(Map, on_delete=models.CASCADE, related_name="map_bans")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"<{self.team.name} - {self.map.name}>"
+
+
+class MatchMapSelected(models.Model):
+    team = models.ForeignKey(
+        Team, on_delete=models.CASCADE, related_name="map_selected"
+    )
+    map = models.ForeignKey(Map, on_delete=models.CASCADE, related_name="map_selected")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"<{self.team.name} - {self.map.name}>"
+
+
 # Create your models here.
 class Match(models.Model):
     status = models.CharField(
@@ -62,6 +84,10 @@ class Match(models.Model):
     )
     winner_team = models.ForeignKey(
         Team, on_delete=models.CASCADE, related_name="matches_winner", null=True
+    )
+    map_bans = models.ManyToManyField(MatchMapBan, related_name="matches_map_bans")
+    map_picks = models.ManyToManyField(
+        MatchMapSelected, related_name="matches_map_picks"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

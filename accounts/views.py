@@ -5,9 +5,11 @@ from accounts.auth import DiscordAuthService, SteamAuthService
 from accounts.schemas import SteamAuthSchema
 from players.models import DiscordUser, Player, SteamUser
 
+
 def redirect_to_discord(request):
     discord_auth = DiscordAuthService()
     return redirect(discord_auth.get_login_url())
+
 
 def discord_callback(request):
     code = request.GET.get("code")
@@ -16,7 +18,9 @@ def discord_callback(request):
     token = discord_auth.exchange_code(code)
     user = discord_auth.get_user_info(token["access_token"])
     request.session["dc_user"] = user
-    dc_user = DiscordUser.objects.get_or_create(user_id=user["id"], username=user["username"])
+    dc_user = DiscordUser.objects.get_or_create(
+        user_id=user["id"], username=user["username"]
+    )
     print(dc_user)
     return redirect("/accounts/steam/")
 
@@ -27,6 +31,7 @@ def redirect_to_steam(request):
         return redirect("/accounts/discord/")
     steam_auth = SteamAuthService()
     return redirect(steam_auth.get_login_url())
+
 
 def steam_callback(request):
     if request.GET.get("openid.mode") != "id_res":
@@ -48,7 +53,13 @@ def steam_callback(request):
     steam_service = SteamAuthService()
     steamid64 = steam_service.authenticate(request.session.get("user"), params)
     player_info = steam_service.get_player_info(steamid64)
-    steam_user, created = SteamUser.objects.get_or_create(steamid64=player_info["steamid64"], username=player_info["username"], steamid32=player_info["steamid32"], profile_url=player_info["profile_url"], avatar=player_info["avatar"])
+    steam_user, created = SteamUser.objects.get_or_create(
+        steamid64=player_info["steamid64"],
+        username=player_info["username"],
+        steamid32=player_info["steamid32"],
+        profile_url=player_info["profile_url"],
+        avatar=player_info["avatar"],
+    )
     discord_user_session = request.session.get("dc_user", None)
     discord_user = DiscordUser.objects.get(user_id=discord_user_session["id"])
     Player.objects.get_or_create(discord_user=discord_user, steam_user=steam_user)
@@ -56,5 +67,8 @@ def steam_callback(request):
 
 
 def success(request):
-
     return render(request, "accounts/success.html")
+
+
+def join(request):
+    return redirect("steam://connect/146.59.53.13:27015/changeme")

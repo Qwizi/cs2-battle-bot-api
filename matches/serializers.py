@@ -1,6 +1,6 @@
 from enum import Enum
 import re
-from matches.models import Map, Match, MatchType
+from matches.models import Map, Match, MatchMapBan, MatchMapSelected, MatchType
 from rest_framework import serializers
 
 from players.serializers import TeamSerializer
@@ -20,6 +20,24 @@ class MatchEventEnum(str, Enum):
 class MapSerializer(serializers.ModelSerializer):
     class Meta:
         model = Map
+        fields = "__all__"
+
+
+class MapBanSerializer(serializers.ModelSerializer):
+    team = TeamSerializer(read_only=True)
+    map = MapSerializer(read_only=True)
+
+    class Meta:
+        model = MatchMapBan
+        fields = "__all__"
+
+
+class MatchMapSelectedSerializer(serializers.ModelSerializer):
+    team = TeamSerializer(read_only=True)
+    map = MapSerializer(read_only=True)
+
+    class Meta:
+        model = MatchMapSelected
         fields = "__all__"
 
 
@@ -45,6 +63,8 @@ class MatchSerializer(serializers.ModelSerializer):
     maps = MapSerializer(many=True, read_only=True)
 
     current_match = CurrentMatchSerializer(read_only=True, source="curent_match")
+    map_bans = MapBanSerializer(many=True, read_only=True)
+    map_picks = MatchMapSelectedSerializer(many=True, read_only=True)
 
     class Meta:
         model = Match
@@ -69,9 +89,9 @@ class CreateMatchSerializer(serializers.Serializer):
         required=False,
         default=["knife", "team1_ct", "team2_ct"],
     )
-    maplist = serializers.ListField(
-        child=serializers.CharField(required=False), required=True
-    )
+    # maplist = serializers.ListField(
+    #     child=serializers.CharField(required=False), required=True
+    # )
     cvars = serializers.DictField(
         child=serializers.CharField(required=False), required=False
     )
@@ -128,3 +148,13 @@ class MatchEventMapResultSerializer(MatchEventSerializer):
     team1 = MatchMapResultTeamSerializer(required=True)
     team2 = MatchMapResultTeamSerializer(required=True)
     winner = MatchTeamWinnerSerializer(required=True)
+
+
+class MatchBanMapSerializer(serializers.Serializer):
+    team_id = serializers.CharField(required=True)
+    map_tag = serializers.CharField(required=True)
+
+
+class MatchPickMapSerializer(serializers.Serializer):
+    team_id = serializers.CharField(required=True)
+    map_tag = serializers.CharField(required=True)

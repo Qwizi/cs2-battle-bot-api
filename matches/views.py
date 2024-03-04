@@ -6,18 +6,22 @@ from rcon.source import Client
 
 from rest_framework.response import Response
 from django.core.cache import cache
-from matches.models import Map, Match, MatchStatus
+from matches.models import Map, Match, MatchMapBan, MatchMapSelected, MatchStatus
 from rest_framework import viewsets
 from rest_framework.decorators import action
 
 from matches.serializers import (
     CreateMatchSerializer,
+    MapSerializer,
+    MatchBanMapSerializer,
     MatchEventEnum,
     MatchEventGoingLiveSerializer,
     MatchEventMapResultSerializer,
     MatchEventSerializer,
     MatchEventSeriesEndSerializer,
     MatchEventSeriesStartSerializer,
+    MatchMapSelectedSerializer,
+    MatchPickMapSerializer,
     MatchSerializer,
 )
 from players.models import DiscordUser, Player, Team
@@ -118,7 +122,7 @@ class MatchViewSet(viewsets.ModelViewSet):
             map_sides = serializer.validated_data.get(
                 "map_sides", ["knife", "team1_ct", "team2_ct"]
             )
-            maplist = serializer.validated_data.get("maplist", None)
+            # maplist = serializer.validated_data.get("maplist", None)
             cvars = serializer.validated_data.get("cvars", None)
             # Remove duplicates from discord_users_ids
             discord_users_ids = list(set(discord_users_ids))
@@ -127,10 +131,19 @@ class MatchViewSet(viewsets.ModelViewSet):
                     {"message": "Discord users cannot be empty"}, status=400
                 )
             try:
-                discord_users_list = [
-                    DiscordUser.objects.get(user_id=discord_user)
-                    for discord_user in discord_users_ids
-                ]
+                discord_users_list = []
+                try:
+                    for discord_user_id in discord_users_ids:
+                        discord_user = DiscordUser.objects.get(user_id=discord_user_id)
+                        discord_users_list.append(discord_user)
+                except DiscordUser.DoesNotExist as e:
+                    return Response(
+                        {
+                            "message": f"Discord user {discord_user_id} not exists",
+                            "user_id": discord_user_id,
+                        },
+                        status=400,
+                    )
                 players_list: list[Player] = []
                 for discord_user in discord_users_list:
                     player: Player = Player.objects.get(discord_user=discord_user)
@@ -183,14 +196,8 @@ class MatchViewSet(viewsets.ModelViewSet):
                         }
                     except Team.DoesNotExist as e:
                         return Response({"message": f"Team {e} not exists"}, status=400)
-                for map in maplist:
-                    if map not in Map.objects.filter().values_list("tag", flat=True):
-                        return Response(
-                            {"message": f"Map {map} not exists"}, status=400
-                        )
-
-                num_maps = len(maplist)
-                maps = Map.objects.filter(tag__in=maplist)
+                maps = Map.objects.all()
+                num_maps = maps.count()
 
                 new_match = Match.objects.create(
                     type=match_type,
@@ -206,7 +213,7 @@ class MatchViewSet(viewsets.ModelViewSet):
                     "team1": {"name": team1.name, "players": team1_players},
                     "team2": {"name": team2.name, "players": team2_players},
                     "num_maps": num_maps,
-                    "maplist": maplist,
+                    "maplist": [map.tag for map in maps],
                     "map_sides": map_sides,
                     "clinch_series": clinch_series,
                     "players_per_team": players_per_team,
@@ -222,8 +229,8 @@ class MatchViewSet(viewsets.ModelViewSet):
                 )
 
                 return Response(new_match_serializer.data, status=201)
-            except DiscordUser.DoesNotExist as e:
-                return Response({"message": f"Discord user {e} not exists"}, status=400)
+            # except DiscordUser.DoesNotExist as e:
+            #     return Response({"message": f"Discord user {e} not exists"}, status=400)
             except Player.DoesNotExist as e:
                 return Response({"message": f"Player {e} not exists"}, status=400)
         else:
@@ -335,3 +342,102 @@ class MatchViewSet(viewsets.ModelViewSet):
         self.publish_event(redis_event, data)
         print(f"Published event: {redis_event} with data: {data}")
         return Response({"event": redis_event, "data": data}, status=200)
+
+    @action(detail=True, methods=["POST"])
+    def map_ban(self, request, pk):
+        try:
+            match = Match.objects.get(id=pk)
+        except Match.DoesNotExist:
+            return Response({"message": f"Match with id {pk} not exists"}, status=400)
+        match_map_ban_serializer = MatchBanMapSerializer(data=request.data)
+        if not match_map_ban_serializer.is_valid():
+            return Response(match_map_ban_serializer.errors, status=400)
+        team_id = match_map_ban_serializer.validated_data.get("team_id")
+        map_tag = match_map_ban_serializer.validated_data.get("map_tag")
+        try:
+            team = Team.objects.get(id=team_id)
+        except Team.DoesNotExist:
+            return Response(
+                {"message": f"Team with id {team_id} not exists"}, status=400
+            )
+        try:
+            map = Map.objects.get(tag=map_tag)
+        except Map.DoesNotExist:
+            return Response(
+                {"message": f"Map with tag {map_tag} not exists"}, status=400
+            )
+        if match.team1 != team and match.team2 != team:
+            return Response(
+                {"message": f"Team {team.name} is not part of match {match.id}"},
+                status=400,
+            )
+        if match.map_bans.filter(map=map).exists():
+            return Response(
+                {"message": f"Map {map_tag} already banned by team {team.name}"},
+                status=400,
+            )
+        if match.map_bans.filter().last() == team:
+            return Response(
+                {
+                    "message": f"Team {team.name} already banned a map. Wait for the other team to ban a map."
+                },
+                status=400,
+            )
+        if match.maps.count() == 1:
+            return Response(
+                {"message": "Only one map left. You can't ban more maps"}, status=400
+            )
+        match_map_ban = MatchMapBan.objects.create(team=team, map=map)
+        match.map_bans.add(match_map_ban)
+        match.maps.remove(map)
+        match.save()
+        current_match = cache.get("current_match")
+        if not current_match:
+            return Response({"message": "No current match in cache"}, status=400)
+        current_match = json.loads(current_match)
+        current_match["maplist"].remove(map.tag)
+        cache.set("current_match", json.dumps(current_match), timeout=60 * 60 * 24 * 7)
+        return Response(match_map_ban_serializer.data, status=201)
+
+    @action(detail=True, methods=["POST"])
+    def map_pick(self, request, pk):
+        try:
+            match = Match.objects.get(id=pk)
+        except Match.DoesNotExist:
+            return Response({"message": f"Match with id {pk} not exists"}, status=400)
+        match_map_pick_serializer = MatchPickMapSerializer(data=request.data)
+        if not match_map_pick_serializer.is_valid():
+            return Response(match_map_pick_serializer.errors, status=400)
+        team_id = match_map_pick_serializer.validated_data.get("team_id")
+        map_tag = match_map_pick_serializer.validated_data.get("map_tag")
+        try:
+            team = Team.objects.get(id=team_id)
+        except Team.DoesNotExist:
+            return Response(
+                {"message": f"Team with id {team_id} not exists"}, status=400
+            )
+        try:
+            map = Map.objects.get(tag=map_tag)
+        except Map.DoesNotExist:
+            return Response(
+                {"message": f"Map with tag {map_tag} not exists"}, status=400
+            )
+        if match.team1 != team and match.team2 != team:
+            return Response(
+                {"message": f"Team {team.name} is not part of match {match.id}"},
+                status=400,
+            )
+        if match.map_picks.filter(map=map).exists():
+            return Response(
+                {"message": f"Map {map_tag} already picked by team"},
+                status=400,
+            )
+        map_selected = MatchMapSelected.objects.create(team=team, map=map)
+        match.map_picks.add(map_selected)
+        match.save()
+        return Response(match_map_pick_serializer.data, status=201)
+
+
+class MapViewSet(viewsets.ModelViewSet):
+    queryset = Map.objects.all()
+    serializer_class = MapSerializer
