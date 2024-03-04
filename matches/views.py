@@ -342,6 +342,7 @@ class MatchViewSet(viewsets.ModelViewSet):
             case MatchEventEnum.MAP_VETOED:
                 redis_event = f"event.{MatchEventEnum.MAP_VETOED.value}"
             case MatchEventEnum.ROUND_END:
+                data = request.data
                 redis_event = f"event.{MatchEventEnum.ROUND_END.value}"
             case MatchEventEnum.GOING_LIVE:
                 going_live_serializer = MatchEventGoingLiveSerializer(data=request.data)
@@ -407,7 +408,7 @@ class MatchViewSet(viewsets.ModelViewSet):
             return Response(
                 {"message": "Only one map left. You can't ban more maps"}, status=400
             )
-        if match.type == MatchType.BO3 and match.map_bans.count() == 3:
+        if match.type == MatchType.BO3 and match.maps.count() == 3:
             return Response({"message": "Both teams already banned 3 maps"}, status=400)
         if match.map_picks.filter(map=map).exists():
             return Response(
