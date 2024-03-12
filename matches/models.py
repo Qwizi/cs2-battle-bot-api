@@ -1,3 +1,5 @@
+from calendar import c
+import math
 from token import STAR
 from django.db import models
 from prefix_id import PrefixIDField
@@ -89,8 +91,42 @@ class Match(models.Model):
     map_picks = models.ManyToManyField(
         MatchMapSelected, related_name="matches_map_picks"
     )
+    message_id = models.CharField(max_length=255, null=True)
+    author_id = models.CharField(max_length=255, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"<{self.team1.name} vs {self.team2.name}- {self.status} - {self.type} - {self.pk}>"
+
+    def get_team1_players_dict(self):
+        return {
+            "name": self.team1.name,
+            "players": self.team1.get_players_dict(),
+        }
+
+    def get_team2_players_dict(self):
+        return {
+            "name": self.team2.name,
+            "players": self.team2.get_players_dict(),
+        }
+
+    def create_current_match_data(self, map_sides, clinch_series, cvars):
+        num_maps = 1 if self.type == MatchType.BO1 else 3
+        players_list = self.team1.players.all() | self.team2.players.all()
+        players_list = list(players_list)
+        player_per_team = len(players_list) / 2
+        player_per_team_rounded = math.ceil(player_per_team)
+        current_match_data = {
+            "matchid": self.pk,
+            "team1": self.get_team1_players_dict(),
+            "team2": self.get_team2_players_dict(),
+            "num_maps": num_maps,
+            "maplist": [map.tag for map in self.maps.all()],
+            "map_sides": map_sides,
+            "clinch_series": clinch_series,
+            "players_per_team": player_per_team_rounded,
+        }
+        if cvars:
+            current_match_data["cvars"] = cvars
+        return current_match_data

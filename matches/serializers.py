@@ -74,8 +74,8 @@ class MatchSerializer(serializers.ModelSerializer):
 
 class CreateMatchSerializer(serializers.Serializer):
     discord_users_ids = serializers.ListField(child=serializers.CharField())
-    team1_id = serializers.CharField(required=False)
-    team2_id = serializers.CharField(required=False)
+    team1_id = serializers.CharField(required=False, allow_null=True)
+    team2_id = serializers.CharField(required=False, allow_null=True)
     shuffle_players = serializers.BooleanField(required=False, default=True)
     match_type = serializers.ChoiceField(
         choices=MatchType.choices, default=MatchType.BO1
@@ -158,3 +158,7 @@ class MatchBanMapSerializer(serializers.Serializer):
 class MatchPickMapSerializer(serializers.Serializer):
     team_id = serializers.CharField(required=True)
     map_tag = serializers.CharField(required=True)
+
+
+class MatchPlayerJoin(serializers.Serializer):
+    discord_user_id = serializers.CharField(required=True)

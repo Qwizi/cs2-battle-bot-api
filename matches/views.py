@@ -1,4 +1,5 @@
 import json
+import math
 from random import shuffle
 from time import sleep
 from django.conf import settings
@@ -21,6 +22,7 @@ from rest_framework.decorators import action
 
 from matches.serializers import (
     CreateMatchSerializer,
+    MapBanSerializer,
     MapSerializer,
     MatchBanMapSerializer,
     MatchEventEnum,
@@ -31,6 +33,7 @@ from matches.serializers import (
     MatchEventSeriesStartSerializer,
     MatchMapSelectedSerializer,
     MatchPickMapSerializer,
+    MatchPlayerJoin,
     MatchSerializer,
 )
 from players.models import DiscordUser, Player, Team
@@ -195,15 +198,17 @@ class MatchViewSet(viewsets.ModelViewSet):
                     try:
                         team1 = Team.objects.get(id=team1_id)
                         team2 = Team.objects.get(id=team2_id)
-                        players_ids = [player.id for player in players_list]
-                        team1_players = {
-                            str(player.steam_user.steamid64): player.steam_user.username
-                            for player in team1.players.filter(pk__in=players_ids)
-                        }
-                        team2_players = {
-                            str(player.steam_user.steamid64): player.steam_user.username
-                            for player in team2.players.filter(pk__in=players_ids)
-                        }
+                        # players_ids = [player.id for player in players_list]
+                        # team1_players = {
+                        #     str(player.steam_user.steamid64): player.steam_user.username
+                        #     for player in team1.players.filter(pk__in=players_ids)
+                        # }
+                        # team2_players = {
+                        #     str(player.steam_user.steamid64): player.steam_user.username
+                        #     for player in team2.players.filter(pk__in=players_ids)
+                        # }
+                        team1_players_dict = team1.get_players_dict()
+                        team2_players_dict = team2.get_players_dict()
                     except Team.DoesNotExist as e:
                         return Response({"message": f"Team {e} not exists"}, status=400)
                 maps = Map.objects.all()
@@ -221,19 +226,11 @@ class MatchViewSet(viewsets.ModelViewSet):
 
                 new_match.maps.set(maps)
                 new_match.save()
-
-                current_match_data = {
-                    "matchid": new_match.id,
-                    "team1": {"name": team1.name, "players": team1_players},
-                    "team2": {"name": team2.name, "players": team2_players},
-                    "num_maps": num_maps,
-                    "maplist": [map.tag for map in maps],
-                    "map_sides": map_sides,
-                    "clinch_series": clinch_series,
-                    "players_per_team": players_per_team,
-                }
-                if cvars:
-                    current_match_data["cvars"] = cvars
+                players_per_team = len(players_list) / 2
+                player_per_team_rounded = math.ceil(players_per_team)
+                current_match_data = new_match.create_current_match_data(
+                    map_sides=map_sides, clinch_series=clinch_series, cvars=cvars
+                )
                 new_match_serializer = MatchSerializer(new_match)
 
                 cache.set(
@@ -292,8 +289,9 @@ class MatchViewSet(viewsets.ModelViewSet):
         match_url = f'"{settings.HOST_URL}/api/matches/current/"'
         response = self.__send_rcon_command("css_endmatch")
         sleep(5)
+        match_serializer = MatchSerializer(match)
         self.__send_rcon_command(load_match_command, match_url, api_key_header, api_key)
-        return Response({"status": "match config loaded"})
+        return Response(match_serializer.data, status=200)
 
     @action(detail=False, methods=["POST"])
     def webhook(self, request):
@@ -392,20 +390,22 @@ class MatchViewSet(viewsets.ModelViewSet):
                 {"message": f"Map {map_tag} already banned by team {team.name}"},
                 status=400,
             )
-        if match.map_bans.filter().last() == team:
+        last_match_map_ban = match.map_bans.all().order_by("-created_at").first()
+
+        if match.map_bans.count() > 0 and last_match_map_ban.team == team:
             return Response(
                 {
                     "message": f"Team {team.name} already banned a map. Wait for the other team to ban a map."
                 },
                 status=400,
             )
-        # if match.map_bans.count() == 0 and team == match.team2:
-        #     return Response(
-        #         {
-        #             "message": f"Team {team.name} is not allowed to ban a map. Team 1 has to ban first"
-        #         },
-        #         status=400,
-        #     )
+        if match.map_bans.count() == 0 and team == match.team2:
+            return Response(
+                {
+                    "message": f"Team {team.name} is not allowed to ban a map. Team 1 has to ban first"
+                },
+                status=400,
+            )
         if match.maps.count() == 1:
             return Response(
                 {"message": "Only one map left. You can't ban more maps"}, status=400
@@ -421,13 +421,14 @@ class MatchViewSet(viewsets.ModelViewSet):
         match.map_bans.add(match_map_ban)
         match.maps.remove(map)
         match.save()
+        match_serializer = MatchSerializer(match)
         current_match = cache.get("current_match")
         if not current_match:
             return Response({"message": "No current match in cache"}, status=400)
         current_match = json.loads(current_match)
         current_match["maplist"].remove(map.tag)
         cache.set("current_match", json.dumps(current_match), timeout=60 * 60 * 24 * 7)
-        return Response(match_map_ban_serializer.data, status=201)
+        return Response(match_serializer.data, status=201)
 
     @action(detail=True, methods=["POST"])
     def map_pick(self, request, pk):
@@ -462,13 +463,21 @@ class MatchViewSet(viewsets.ModelViewSet):
                 {"message": f"Map {map_tag} already picked by team"},
                 status=400,
             )
-        # if match.map_picks.count() == 0 and team == match.team2:
-        #     return Response(
-        #         {
-        #             "message": f"Team {team.name} is not allowed to pick a map. Team 1 has to pick first"
-        #         },
-        #         status=400,
-        #     )
+        last_pick = match.map_picks.all().order_by("-created_at").first()
+        if match.map_picks.count() > 0 and last_pick.team == team:
+            return Response(
+                {
+                    "message": f"Team {team.name} already picked a map. Wait for the other team to pick a map."
+                },
+                status=400,
+            )
+        if match.map_picks.count() == 0 and team == match.team2:
+            return Response(
+                {
+                    "message": f"Team {team.name} is not allowed to pick a map. Team 1 has to pick first"
+                },
+                status=400,
+            )
         if match.map_picks.count() == 2:
             return Response({"message": "Both teams already picked a map"}, status=400)
         if not match.maps.filter(tag=map_tag).exists():
@@ -483,7 +492,7 @@ class MatchViewSet(viewsets.ModelViewSet):
         current_match = cache.get("current_match")
         if not current_match:
             return Response({"message": "No current match in cache"}, status=400)
-
+        match_serializer = MatchSerializer(match)
         current_match = json.loads(current_match)
 
         map_index = current_match["maplist"].index(map.tag)
@@ -495,7 +504,8 @@ class MatchViewSet(viewsets.ModelViewSet):
         else:
             current_match["maplist"].insert(1, map.tag)
         cache.set("current_match", json.dumps(current_match), timeout=60 * 60 * 24 * 7)
-        return Response(match_map_pick_serializer.data, status=201)
+
+        return Response(match_serializer.data, status=201)
 
     @action(detail=True, methods=["POST"])
     def recreate(self, request, pk):
@@ -538,8 +548,110 @@ class MatchViewSet(viewsets.ModelViewSet):
         match_serializer = MatchSerializer(match)
         if not match_serializer:
             return Response({"message": "Error shuffling teams"}, status=400)
+        current_match = cache.get("current_match")
+        if not current_match:
+            return Response({"message": "No current match in cache"}, status=400)
 
+        current_match = json.loads(current_match)
+
+        updated_current_match = match.create_current_match_data(
+            map_sides=current_match["map_sides"],
+            clinch_series=current_match["clinch_series"],
+            cvars=current_match.get("cvars", None),
+        )
+        cache.set(
+            "current_match", json.dumps(updated_current_match), timeout=60 * 60 * 24 * 7
+        )
         return Response(match_serializer.data, status=201)
+
+    @action(detail=True, methods=["GET"])
+    def bans(self, request, pk):
+        try:
+            match = Match.objects.get(id=pk)
+        except Match.DoesNotExist:
+            return Response({"message": f"Match with id {pk} not exists"}, status=400)
+        queryset = match.map_bans.all().order_by("-created_at")
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = MapBanSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = MapBanSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["GET"])
+    def picks(self, request, pk):
+        try:
+            match = Match.objects.get(id=pk)
+        except Match.DoesNotExist:
+            return Response({"message": f"Match with id {pk} not exists"}, status=400)
+        queryset = match.map_picks.all().order_by("-created_at")
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = MatchMapSelectedSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = MatchMapSelectedSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["POST"])
+    def join(self, request, pk):
+        try:
+            match = Match.objects.get(id=pk)
+        except Match.DoesNotExist:
+            return Response({"message": f"Match with id {pk} not exists"}, status=400)
+        current_match = cache.get("current_match")
+        if not current_match:
+            return Response({"message": "No current match in cache"}, status=400)
+        match_player_join_serializer = MatchPlayerJoin(data=request.data)
+        if not match_player_join_serializer.is_valid():
+            return Response(match_player_join_serializer.errors, status=400)
+
+        discord_user_id = match_player_join_serializer.validated_data.get(
+            "discord_user_id"
+        )
+        try:
+            player = Player.objects.get(discord_user__user_id=discord_user_id)
+        except Player.DoesNotExist:
+            return Response(
+                {
+                    "message": f"Player with discord_user__user_id {discord_user_id} not exists"
+                },
+                status=400,
+            )
+        if match.team1.players.filter(pk=player.id).exists():
+            return Response(
+                {
+                    "message": f"Player {player.steam_user.username} is already in team 1"
+                },
+                status=400,
+            )
+        if match.team2.players.filter(pk=player.id).exists():
+            return Response(
+                {
+                    "message": f"Player {player.steam_user.username} is already in team 2"
+                },
+                status=400,
+            )
+        if match.team1.players.count() < match.team2.players.count():
+            match.team1.players.add(player)
+        else:
+            match.team2.players.add(player)
+        match.save()
+        match_serializer = MatchSerializer(match)
+        current_match = json.loads(current_match)
+
+        updated_current_match = match.create_current_match_data(
+            map_sides=current_match["map_sides"],
+            clinch_series=current_match["clinch_series"],
+            cvars=current_match.get("cvars", None),
+        )
+        cache.set(
+            "current_match", json.dumps(updated_current_match), timeout=60 * 60 * 24 * 7
+        )
+        return Response(match_serializer.data, status=200)
 
 
 class MapViewSet(viewsets.ModelViewSet):

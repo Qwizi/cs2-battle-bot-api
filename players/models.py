@@ -56,3 +56,9 @@ class Team(models.Model):
 
     def __str__(self):
         return f"<{self.id} - {self.name}>"
+
+    def get_players_dict(self):
+        return {
+            str(player.steam_user.steamid64): player.steam_user.username
+            for player in self.players.all()
+        }
