@@ -1,16 +1,6 @@
 [
     {
         "model": "matches.map",
-        "pk": "map_1ZI3WOM9NCJMaA8HWVSFgb",
-        "fields": {
-            "name": "Dust",
-            "tag": "de_dust",
-            "created_at": "2024-03-01T16:02:17.416Z",
-            "updated_at": "2024-03-01T16:02:17.416Z"
-        }
-    },
-    {
-        "model": "matches.map",
         "pk": "map_4135blNI8T02nvPpM5C5MS",
         "fields": {
             "name": "Anubis",

@@ -97,3 +97,8 @@ docker compose exec app python manage.py createsuperuser
    ```shell
    docker compose up -d --build
    ```
+7. **Add maps**:
+Run fixture with maps
+```shell
+docker compose exec app python manage.py loaddata maps
+```
