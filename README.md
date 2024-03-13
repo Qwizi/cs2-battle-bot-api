@@ -32,8 +32,8 @@ services:
       - DB_PORT=5432
       - REDIS_URL=redis://redis:6379/0
       - HOST_URL=http://localhost:8003
-      - DISCORD_CLIENT_ID=1209605664553570395
-      - DISCORD_CLIENT_SECRET=BVjpOVM-ScOmKpz98IvvMVKxpOWCfIAd
+      - DISCORD_CLIENT_ID=
+      - DISCORD_CLIENT_SECRET=
       - DISCORD_REDIRECT_URI=http://localhost:8003/accounts/discord/callback
       - STEAM_API_KEY=
       - STEAM_REDIRECT_URI=https://localhost:8003/accounts/steam/callback
