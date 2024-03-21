@@ -9,7 +9,9 @@ class Server(models.Model):
     port = models.PositiveIntegerField()
     rcon_password = models.CharField(max_length=100)
     max_players = models.PositiveIntegerField()
-    matches = models.ManyToManyField("matches.Match", related_name="servers", null=True, blank=True)
+    matches = models.ManyToManyField(
+        "matches.Match", related_name="servers", null=True, blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

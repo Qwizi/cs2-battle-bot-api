@@ -41,7 +41,7 @@ class MatchMapSelectedSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class CurrentMatchSerializer(serializers.Serializer):
+class MatchConfigSerializer(serializers.Serializer):
     matchid = serializers.CharField()
     team1 = serializers.DictField()
     team2 = serializers.DictField()
@@ -54,6 +54,7 @@ class CurrentMatchSerializer(serializers.Serializer):
     )
     clinch_series = serializers.BooleanField()
     players_per_team = serializers.IntegerField()
+    cvars = serializers.DictField(required=False)
 
 
 class MatchSerializer(serializers.ModelSerializer):
@@ -62,7 +63,7 @@ class MatchSerializer(serializers.ModelSerializer):
     winner_team = TeamSerializer(read_only=True)
     maps = MapSerializer(many=True, read_only=True)
 
-    current_match = CurrentMatchSerializer(read_only=True, source="curent_match")
+    config = MatchConfigSerializer(read_only=True, source="get_config")
     map_bans = MapBanSerializer(many=True, read_only=True)
     map_picks = MatchMapSelectedSerializer(many=True, read_only=True)
 
@@ -74,9 +75,6 @@ class MatchSerializer(serializers.ModelSerializer):
 
 class CreateMatchSerializer(serializers.Serializer):
     discord_users_ids = serializers.ListField(child=serializers.CharField())
-    team1_id = serializers.CharField(required=False, allow_null=True)
-    team2_id = serializers.CharField(required=False, allow_null=True)
-    shuffle_players = serializers.BooleanField(required=False, default=True)
     match_type = serializers.ChoiceField(
         choices=MatchType.choices, default=MatchType.BO1
     )
@@ -89,9 +87,6 @@ class CreateMatchSerializer(serializers.Serializer):
         required=False,
         default=["knife", "knife", "knife"],
     )
-    # maplist = serializers.ListField(
-    #     child=serializers.CharField(required=False), required=True
-    # )
     cvars = serializers.DictField(
         child=serializers.CharField(required=False), required=False
     )

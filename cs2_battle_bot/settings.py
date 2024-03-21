@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "players.apps.PlayersConfig",
     "matches.apps.MatchesConfig",
     "servers.apps.ServersConfig",
+    "guilds.apps.GuildsConfig",
     "rest_framework",
     "rest_framework_api_key",
 ]
@@ -53,8 +54,11 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework_api_key.permissions.HasAPIKey",
     ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
-    "PAGE_SIZE": 100,
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.QueryParameterVersioning",
+    "DEFAULT_VERSION": "1.0",
+    "ALLOWED_VERSIONS": ["1.0", "2.0"],
+    "PAGE_SIZE": 15,
 }
 
 API_KEY_CUSTOM_HEADER = "HTTP_X_API_KEY"

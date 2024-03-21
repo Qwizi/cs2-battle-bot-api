@@ -2,6 +2,7 @@ from calendar import c
 import math
 from token import STAR
 from django.db import models
+from django.dispatch import receiver
 from prefix_id import PrefixIDField
 
 from players.models import Team
@@ -91,6 +92,13 @@ class Match(models.Model):
     map_picks = models.ManyToManyField(
         MatchMapSelected, related_name="matches_map_picks"
     )
+    num_maps = models.PositiveIntegerField(default=1)
+    maplist = models.JSONField(null=True)
+    map_sides = models.JSONField(null=True)
+    clinch_series = models.BooleanField(default=False)
+    cvars = models.JSONField(null=True)
+    players_per_team = models.PositiveIntegerField(default=5)
+    cvars = models.JSONField(null=True)
     message_id = models.CharField(max_length=255, null=True)
     author_id = models.CharField(max_length=255, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -130,3 +138,18 @@ class Match(models.Model):
         if cvars:
             current_match_data["cvars"] = cvars
         return current_match_data
+
+    def get_config(self):
+        config = {
+            "matchid": self.pk,
+            "team1": self.get_team1_players_dict(),
+            "team2": self.get_team2_players_dict(),
+            "num_maps": self.num_maps,
+            "maplist": self.maplist,
+            "map_sides": self.map_sides,
+            "clinch_series": self.clinch_series,
+            "players_per_team": self.players_per_team,
+        }
+        if self.cvars:
+            config["cvars"] = self.cvars
+        return config
