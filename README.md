@@ -19,7 +19,7 @@ services:
   app:
     container_name: cs2_battle_bot_api
     image: qwizii/cs2-battle-bot-api:latest
-    command: python manage.py runserver 0.0.0.0:8000
+    command: gunicorn cs2_battle_bot.wsgi:application --bind 0.0.0.0:8000
     ports:
       - "8003:8000"
     environment:

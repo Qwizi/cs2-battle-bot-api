@@ -1,0 +1,60 @@
+services:
+  app:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    container_name: cs2_battle_bot_api_prod
+    command: sh -c "gunicorn cs2_battle_bot.wsgi:application --bind 0.0.0.0:8000"
+    expose:
+      - "8000"
+    volumes:
+      - static_volume:/app/staticfiles/
+    env_file:
+      - .env.prod
+    restart: unless-stopped
+    depends_on:
+      - db
+    networks:
+      - cs2-battle-bot-network
+  db:
+    image: postgres:15.1
+    container_name: cs2_battle_bot_api_db_prod
+    env_file:
+      - .env.prod
+    restart: unless-stopped
+    ports:
+      - "5435:5432"
+    healthcheck:
+      test: "exit 0"
+    networks:
+      - cs2-battle-bot-network
+  redis:
+    image: "redis:alpine"
+    container_name: cs2_battle_bot_api_redis_prod
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    expose:
+      - "6379:6379"
+    networks:
+      - cs2-battle-bot-network
+    healthcheck:
+      test: "exit 1"
+  nginx:
+    container_name: cs2_battle_bot_api_nginx_prod
+    build: ./nginx
+    ports:
+      - 8002:80
+    volumes:
+      - static_volume:/app/staticfiles/
+    depends_on:
+      - app
+    networks:
+      - cs2-battle-bot-network
+
+networks:
+  cs2-battle-bot-network:
+    external: true
+
+volumes:
+  static_volume:
