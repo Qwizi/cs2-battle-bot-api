@@ -4,6 +4,7 @@ from token import STAR
 from django.db import models
 from django.dispatch import receiver
 from prefix_id import PrefixIDField
+from cs2_battle_bot import settings
 
 from players.models import Team
 
@@ -119,26 +120,6 @@ class Match(models.Model):
             "players": self.team2.get_players_dict(),
         }
 
-    def create_current_match_data(self, map_sides, clinch_series, cvars):
-        num_maps = 1 if self.type == MatchType.BO1 else 3
-        players_list = self.team1.players.all() | self.team2.players.all()
-        players_list = list(players_list)
-        player_per_team = len(players_list) / 2
-        player_per_team_rounded = math.ceil(player_per_team)
-        current_match_data = {
-            "matchid": self.pk,
-            "team1": self.get_team1_players_dict(),
-            "team2": self.get_team2_players_dict(),
-            "num_maps": num_maps,
-            "maplist": [map.tag for map in self.maps.all()],
-            "map_sides": map_sides,
-            "clinch_series": clinch_series,
-            "players_per_team": player_per_team_rounded,
-        }
-        if cvars:
-            current_match_data["cvars"] = cvars
-        return current_match_data
-
     def get_config(self):
         config = {
             "matchid": self.pk,
@@ -153,3 +134,12 @@ class Match(models.Model):
         if self.cvars:
             config["cvars"] = self.cvars
         return config
+
+    def get_connect_command(self):
+        return f"connect {settings.RCON_HOST}:{settings.SERVER_PORT}; password {settings.SERVER_PASSWORD};"
+
+    def get_load_match_command(self):
+        api_key_header = '"X-Api-Key"'
+        api_key = f'"{settings.API_KEY}"'
+        match_url = f'"{settings.HOST_URL}/api/matches/{self.pk}/config/"'
+        return f"matchzy_loadmatch_url {match_url} {api_key_header} {api_key}"

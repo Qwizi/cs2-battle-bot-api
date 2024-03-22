@@ -66,6 +66,12 @@ class MatchSerializer(serializers.ModelSerializer):
     config = MatchConfigSerializer(read_only=True, source="get_config")
     map_bans = MapBanSerializer(many=True, read_only=True)
     map_picks = MatchMapSelectedSerializer(many=True, read_only=True)
+    connect_command = serializers.CharField(
+        read_only=True, source="get_connect_command"
+    )
+    load_match_command = serializers.CharField(
+        read_only=True, source="get_load_match_command"
+    )
 
     class Meta:
         model = Match

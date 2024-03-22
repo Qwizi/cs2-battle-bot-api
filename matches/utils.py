@@ -1,12 +1,10 @@
 import json
 import math
-from random import shuffle
 from time import sleep
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rcon import Client, EmptyResponse, SessionTimeout, WrongPassword
 import redis
-from requests import Response
 from matches.models import (
     Map,
     Match,
@@ -29,10 +27,12 @@ from matches.serializers import (
     MatchSerializer,
 )
 from players.models import DiscordUser, Player, Team
-from players.utils import create_default_teams
+from players.utils import create_default_teams, divide_players
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 
-def send_rcon_command(self, command: str, *args):
+def send_rcon_command(command: str, *args):
     """
     Send an RCON command to the server.
 
@@ -57,7 +57,18 @@ def send_rcon_command(self, command: str, *args):
         return None
 
 
-def create_match(request):
+def create_match(request: Request) -> Response:
+    """
+    Create a new match.
+
+    Args:
+    -----
+        request (Request): Request object.
+
+    Returns:
+    --------
+        Response: Response object.
+    """
     serializer = CreateMatchSerializer(data=request.data)
     if not serializer.is_valid():
         return Response(serializer.errors, status=400)
@@ -122,7 +133,18 @@ def create_match(request):
     return Response(new_match_serializer.data, status=201)
 
 
-def load_match(pk):
+def load_match(pk: int) -> Response:
+    """
+    Load a match into the server.
+
+    Args:
+    -----
+        pk (int): Match ID.
+
+    Returns:
+    --------
+        Response: Response object.
+    """
     match = get_object_or_404(Match, pk=pk)
     api_key_header = '"X-Api-Key"'
     api_key = f'"{settings.API_KEY}"'
@@ -135,7 +157,19 @@ def load_match(pk):
     return Response(match_serializer.data, status=200)
 
 
-def ban_map(request, pk):
+def ban_map(request: Request, pk: int) -> Response:
+    """
+    Ban a map from the match.
+
+    Args:
+    -----
+        request (Request): Request object.
+        pk (int): Match ID.
+
+    Returns:
+    --------
+        Response: Response object.
+    """
     match: Match = get_object_or_404(Match, pk=pk)
     match_map_ban_serializer = MatchBanMapSerializer(data=request.data)
     if not match_map_ban_serializer.is_valid():
@@ -203,7 +237,20 @@ def ban_map(request, pk):
     return Response(match_serializer.data, status=201)
 
 
-def pick_map(request, pk):
+def pick_map(request: Request, pk: int) -> Response:
+    """
+    Pick a map for the match.
+
+    Args:
+    -----
+        request (Request): Request object.
+        pk (int): Match ID.
+
+
+    Returns:
+    --------
+        Response: Response object.
+    """
     match: Match = get_object_or_404(Match, pk=pk)
     match_map_pick_serializer = MatchPickMapSerializer(data=request.data)
     if not match_map_pick_serializer.is_valid():
@@ -261,26 +308,18 @@ def pick_map(request, pk):
     return Response(match_serializer.data, status=201)
 
 
-def divide_players(players_list: list[Player]) -> tuple[list[Player], list[Player]]:
+def shuffle_teams(pk: int) -> Response:
     """
-    Divide a list of players into two lists.
+    Shuffle the teams of a match.
 
     Args:
     -----
-        players_list (list[Player]): List of players.
+        pk (int): Match ID.
 
     Returns:
     --------
-        tuple[list[Player], list[Player]]: Tuple with two lists of players.
-
+        Response: Response object.
     """
-    shuffle(players_list)
-    num_members = len(players_list)
-    middle_index = num_members // 2
-    return players_list[:middle_index], players_list[middle_index:]
-
-
-def shuffle_teams(pk):
     match: Match = get_object_or_404(Match, pk=pk)
     players = match.team1.players.all() | match.team2.players.all()
     players = list(players)
@@ -294,12 +333,35 @@ def shuffle_teams(pk):
     return Response(match_serializer.data, status=200)
 
 
-def publish_event(self, event, data):
+def publish_event(event: str, data: dict):
+    """
+    Publish an event to the Redis server.
+
+    Args:
+    -----
+        event (str): Event name.
+        data (dict): Event data.
+
+    Returns:
+    --------
+        None
+    """
     redis_client = redis.StrictRedis(host="redis", port=6379, db=0)
-    redis_client.publish("event.going_live", json.dumps(data))
+    redis_client.publish(event, json.dumps(data))
 
 
-def process_webhook(request):
+def process_webhook(request: Request) -> Response:
+    """
+    Process a webhook event.
+
+    Args:
+    -----
+        request (Request): Request object.
+
+    Returns:
+    --------
+        Response: Response object.
+    """
     match_event_serializer = MatchEventSerializer(data=request.data)
     if not match_event_serializer.is_valid():
         return Response(match_event_serializer.errors, status=400)
@@ -354,7 +416,19 @@ def process_webhook(request):
     return Response({"event": redis_event, "data": data}, status=200)
 
 
-def join_match(request, pk):
+def join_match(request: Request, pk: int) -> Response:
+    """
+    Join a match.
+
+    Args:
+    -----
+        request (Request): Request object.
+        pk (int): Match ID.
+
+    Returns:
+    --------
+        Response: Response object.
+    """
     match: Match = get_object_or_404(Match, pk=pk)
     match_player_join_serializer = MatchPlayerJoin(data=request.data)
     if not match_player_join_serializer.is_valid():
@@ -381,7 +455,18 @@ def join_match(request, pk):
     return Response(match_serializer.data, status=200)
 
 
-def recreate_match(pk):
+def recreate_match(pk: int) -> Response:
+    """
+    Create a new match with the same teams.
+
+    Args:
+    -----
+        pk (int): Match ID.
+
+    Returns:
+    --------
+        Response: Response object.
+    """
     match: Match = get_object_or_404(Match, pk=pk)
     new_match = Match.objects.create(
         type=match.type,

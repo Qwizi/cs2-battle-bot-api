@@ -56,8 +56,8 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.QueryParameterVersioning",
-    "DEFAULT_VERSION": "1.0",
-    "ALLOWED_VERSIONS": ["1.0", "2.0"],
+    "DEFAULT_VERSION": "2.0",
+    "ALLOWED_VERSIONS": ["2.0"],
     "PAGE_SIZE": 15,
 }
 
@@ -169,5 +169,6 @@ STEAM_REDIRECT_URI = os.environ.get("STEAM_REDIRECT_URI", "uri")
 RCON_HOST = os.environ.get("RCON_HOST", "localhost")
 RCON_PORT = os.environ.get("RCON_PORT", 27015)
 RCON_PASSWORD = os.environ.get("RCON_PASSWORD", "password")
-
+SERVER_PORT = os.environ.get("SERVER_PORT", 27015)
+SERVER_PASSWORD = os.environ.get("SERVER_PASSWORD", "changeme")
 API_KEY = os.environ.get("API_KEY", "key")
