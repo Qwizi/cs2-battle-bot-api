@@ -83,7 +83,7 @@ def create_match(request: Request) -> Response:
     if len(discord_users_ids) < 2:
         return Response({"message": "At least 2 players are required"}, status=400)
 
-    discord_users_list = []
+    discord_users_list: list[DiscordUser] = []
     try:
         for discord_user_id in discord_users_ids:
             discord_user = DiscordUser.objects.get(user_id=discord_user_id)
@@ -91,10 +91,10 @@ def create_match(request: Request) -> Response:
     except DiscordUser.DoesNotExist as e:
         return Response(
             {
-                "message": f"Discord user {discord_user_id} not exists",
+                "message": e.args,
                 "user_id": discord_user_id,
             },
-            status=400,
+            status=404,
         )
     players_list: list[Player] = []
     for discord_user in discord_users_list:
@@ -102,9 +102,10 @@ def create_match(request: Request) -> Response:
         if player.steam_user is None:
             return Response(
                 {
-                    "message": f"Discord user {discord_user.username} has no connected player"
+                    "message": f"Discord user {discord_user.username} has no connected player",
+                    "user_id": discord_user.user_id,
                 },
-                status=400,
+                status=404,
             )
         players_list.append(player)
 
