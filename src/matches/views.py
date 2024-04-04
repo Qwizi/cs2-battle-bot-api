@@ -1,3 +1,4 @@
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from matches.models import (
     Map,
@@ -36,7 +37,7 @@ class MatchViewSet(viewsets.ModelViewSet):
     def load(self, request, pk=None):
         return load_match(pk)
 
-    @action(detail=False, methods=["POST"])
+    @action(detail=False, methods=["POST"], permission_classes=[IsAuthenticated])
     def webhook(self, request):
         return process_webhook(request)
 
@@ -86,7 +87,7 @@ class MatchViewSet(viewsets.ModelViewSet):
     def join(self, request, pk):
         return join_match(request, pk)
 
-    @action(detail=True, methods=["GET"])
+    @action(detail=True, methods=["GET"], permission_classes=[IsAuthenticated])
     def config(self, request, pk):
         match = self.get_object()
         serializer = MatchConfigSerializer(data=match.get_config())

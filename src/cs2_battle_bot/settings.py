@@ -51,11 +51,15 @@ INSTALLED_APPS = [
     "api.apps.ApiConfig",
     "rest_framework",
     "rest_framework_api_key",
+    "rest_framework.authtoken",
 ]
 
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework_api_key.permissions.HasAPIKey",
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+           'rest_framework.authentication.TokenAuthentication',
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.QueryParameterVersioning",
@@ -176,3 +180,5 @@ RCON_PASSWORD = os.environ.get("RCON_PASSWORD", "password")
 SERVER_PORT = os.environ.get("SERVER_PORT", 27015)
 SERVER_PASSWORD = os.environ.get("SERVER_PASSWORD", "changeme")
 API_KEY = os.environ.get("API_KEY", "key")
+
+AUTH_USER_MODEL = "accounts.User"  # new

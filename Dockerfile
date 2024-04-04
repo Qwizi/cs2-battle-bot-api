@@ -13,7 +13,7 @@ RUN poetry config virtualenvs.create false
 #RUN poetry config installer.no-binary cryptography
 
 # Copy the project files for dependency installation
-COPY ./pyproject.toml ./poetry.lock /code/
+COPY pyproject.toml ./poetry.lock /code/
 
 # Install project dependencies using Poetry
 RUN poetry install --no-interaction --no-ansi
@@ -32,7 +32,7 @@ WORKDIR /app
 COPY --from=builder /code /app
 
 # Copy the source code
-COPY . /app/
+COPY src /app/
 
 # Change ownership to the dedicated user
 RUN chown -R fastapiuser:fastapi /app

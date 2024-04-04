@@ -6,7 +6,7 @@ from servers.models import Server
 class ServerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Server
-        fields = "__all__"
+        fields = ["id", "name", "ip", "port", "password", "is_public"]
 
     
 class CreateMatchSerializer(serializers.Serializer):

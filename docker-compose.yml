@@ -1,10 +1,10 @@
 services:
   app:
     build:
-      context: ./src
+      context: ./
       dockerfile: Dockerfile
     container_name: cs2_battle_bot_api
-    command: sh -c "cd src && gunicorn cs2_battle_bot.wsgi:application --bind 0.0.0.0:8000 --reload"
+    command: sh -c "cd src && python manage.py runserver 0.0.0.0:8000"
     ports:
       - "8002:8000"
     volumes:

@@ -90,13 +90,13 @@ class SteamAuthService:
         with httpx.Client() as client:
             response = client.post(url=self.auth_url, data=formatted_params)
             return "is_valid:true" in response.text
-        
+
     def get_player_info(self, steamid64) -> dict:
         steam_api = WebAPI(settings.STEAM_API_KEY)
         results = steam_api.call(
-                "ISteamUser.GetPlayerSummaries",
-                steamids=steamid64,
-            )
+            "ISteamUser.GetPlayerSummaries",
+            steamids=steamid64,
+        )
         if not len(results["response"]["players"]):
             msg = "Invalid steamid64"
             raise Exception(msg)  # noqa: TRY002
@@ -107,7 +107,7 @@ class SteamAuthService:
         avatar = player["avatarfull"]
 
         steamid64_from_player = player["steamid"]
-        steamid32 = SteamID(steamid64_from_player).as_steam2        
+        steamid32 = SteamID(steamid64_from_player).as_steam2
         return {
             "username": player["personaname"],  # noqa: TRY002
             "steamid64": steamid64_from_player,
@@ -159,7 +159,7 @@ class DiscordAuthService:
         self.token_url = "https://discord.com/api/oauth2/token"
 
     def get_login_url(self):
-        return f"{self.auth_url}?client_id={settings.DISCORD_CLIENT_ID}&response_type=code&redirect_uri={settings.DISCORD_REDIRECT_URI}&scope=identify"
+        return f"{self.auth_url}?client_id={settings.DISCORD_CLIENT_ID}&response_type=code&redirect_uri={settings.DISCORD_REDIRECT_URI}&scope=identify+email"
 
     def exchange_code(self, code: str) -> dict:
         """
@@ -186,6 +186,7 @@ class DiscordAuthService:
                 headers=headers,
                 auth=(settings.DISCORD_CLIENT_ID, settings.DISCORD_CLIENT_SECRET),
             )
+            response.raise_for_status()
             return response.json()
 
     def get_user_info(self, access_token: str) -> dict:

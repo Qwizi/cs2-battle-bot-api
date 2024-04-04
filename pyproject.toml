@@ -5,6 +5,10 @@ description = ""
 authors = ["Adrian Ciolek <ciolek.adrian@protonmail.com>"]
 readme = "README.md"
 
+packages = [
+    { include = "src/"},
+]
+
 [tool.poetry.dependencies]
 python = "^3.11"
 django = "^5.0.2"
@@ -17,6 +21,7 @@ djangorestframework = "^3.14.0"
 djangorestframework-api-key = "==2.*"
 rcon = "^2.4.6"
 gunicorn = "^21.2.0"
+django-oauth-toolkit = "^2.3.0"
 
 
 [build-system]

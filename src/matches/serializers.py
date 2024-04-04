@@ -1,8 +1,8 @@
 from enum import Enum
 import re
-from matches.models import Map, Match, MatchMapBan, MatchMapSelected, MatchType
 from rest_framework import serializers
 
+from matches.models import Map, MapBan, MapPick, Match, MatchType
 from players.serializers import TeamSerializer
 
 
@@ -28,7 +28,7 @@ class MapBanSerializer(serializers.ModelSerializer):
     map = MapSerializer(read_only=True)
 
     class Meta:
-        model = MatchMapBan
+        model = MapBan
         fields = "__all__"
 
 
@@ -37,7 +37,7 @@ class MatchMapSelectedSerializer(serializers.ModelSerializer):
     map = MapSerializer(read_only=True)
 
     class Meta:
-        model = MatchMapSelected
+        model = MapPick
         fields = "__all__"
 
 
@@ -63,7 +63,6 @@ class MatchSerializer(serializers.ModelSerializer):
     winner_team = TeamSerializer(read_only=True)
     maps = MapSerializer(many=True, read_only=True)
 
-    config = MatchConfigSerializer(read_only=True, source="get_config")
     map_bans = MapBanSerializer(many=True, read_only=True)
     map_picks = MatchMapSelectedSerializer(many=True, read_only=True)
     connect_command = serializers.CharField(
@@ -81,6 +80,8 @@ class MatchSerializer(serializers.ModelSerializer):
 
 class CreateMatchSerializer(serializers.Serializer):
     discord_users_ids = serializers.ListField(child=serializers.CharField())
+    author_id = serializers.CharField(required=True)
+    server_id = serializers.CharField(required=False)
     match_type = serializers.ChoiceField(
         choices=MatchType.choices, default=MatchType.BO1
     )
@@ -152,13 +153,12 @@ class MatchEventMapResultSerializer(MatchEventSerializer):
 
 
 class MatchBanMapSerializer(serializers.Serializer):
-    team_id = serializers.CharField(required=True)
+    interaction_user_id = serializers.CharField(required=True)
     map_tag = serializers.CharField(required=True)
 
 
-class MatchPickMapSerializer(serializers.Serializer):
-    team_id = serializers.CharField(required=True)
-    map_tag = serializers.CharField(required=True)
+class MatchPickMapSerializer(MatchBanMapSerializer):
+    pass
 
 
 class MatchPlayerJoin(serializers.Serializer):

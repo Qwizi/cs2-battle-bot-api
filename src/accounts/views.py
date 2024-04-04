@@ -1,9 +1,14 @@
+import httpx
 from django.http import HttpResponsePermanentRedirect, JsonResponse
 from django.shortcuts import redirect, render
+from rest_framework.response import Response
 
 from accounts.auth import DiscordAuthService, SteamAuthService
 from accounts.schemas import SteamAuthSchema
 from players.models import DiscordUser, Player, SteamUser
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 def redirect_to_discord(request):
@@ -15,13 +20,21 @@ def discord_callback(request):
     code = request.GET.get("code")
 
     discord_auth = DiscordAuthService()
-    token = discord_auth.exchange_code(code)
-    user = discord_auth.get_user_info(token["access_token"])
-    request.session["dc_user"] = user
-    dc_user = DiscordUser.objects.get_or_create(
-        user_id=user["id"], username=user["username"]
+    try:
+        token = discord_auth.exchange_code(code)
+    except httpx.HTTPError as e:
+        print(e)
+        return JsonResponse({"error": repr(e)}, status=400)
+    if not token:
+        return JsonResponse({"error": "Invalid token"}, status=400)
+    user_info = discord_auth.get_user_info(token["access_token"])
+    request.session["dc_user"] = user_info
+    dc_user, _ = DiscordUser.objects.get_or_create(
+        user_id=user_info["id"], username=user_info["username"]
     )
-    print(dc_user)
+    user, _ = User.objects.get_or_create(
+        username=user_info["username"], email=user_info["email"]
+    )
     return redirect("/accounts/steam/")
 
 
@@ -62,7 +75,12 @@ def steam_callback(request):
     )
     discord_user_session = request.session.get("dc_user", None)
     discord_user = DiscordUser.objects.get(user_id=discord_user_session["id"])
-    Player.objects.get_or_create(discord_user=discord_user, steam_user=steam_user)
+    player, _ = Player.objects.get_or_create(
+        discord_user=discord_user, steam_user=steam_user
+    )
+    user = User.objects.get(username=discord_user.username)
+    user.player = player
+    user.save()
     return redirect("/accounts/success/")
 
 

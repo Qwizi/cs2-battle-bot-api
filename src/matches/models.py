@@ -1,13 +1,14 @@
-from calendar import c
-import math
-from token import STAR
+
+
+from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db import models
-from django.dispatch import receiver
 from prefix_id import PrefixIDField
-from cs2_battle_bot import settings
+from rest_framework.authtoken.models import Token
 
 from players.models import Team
 
+UserModel = get_user_model()
 
 class MatchStatus(models.TextChoices):
     CREATED = "CREATED"
@@ -18,24 +19,8 @@ class MatchStatus(models.TextChoices):
 
 class MatchType(models.TextChoices):
     BO1 = "BO1"
-    BO2 = "BO2"
     BO3 = "BO3"
     BO5 = "BO5"
-
-
-class MatchMap(models.TextChoices):
-    MIRAGE = "de_mirage"
-    INFERNO = "de_inferno"
-    NUKE = "de_nuke"
-    VERTIGO = "de_vertigo"
-    OVERPASS = "de_overpass"
-    ANCIENT = "de_ancient"
-    ANUBUS = "de_anubis"
-
-
-class TeamSide(models.TextChoices):
-    CT = "CT"
-    T = "T"
 
 
 class Map(models.Model):
@@ -49,7 +34,7 @@ class Map(models.Model):
         return f"<{self.name} - {self.tag} - {self.id}>"
 
 
-class MatchMapBan(models.Model):
+class MapBan(models.Model):
     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="map_bans")
     map = models.ForeignKey(Map, on_delete=models.CASCADE, related_name="map_bans")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -59,7 +44,7 @@ class MatchMapBan(models.Model):
         return f"<{self.team.name} - {self.map.name}>"
 
 
-class MatchMapSelected(models.Model):
+class MapPick(models.Model):
     team = models.ForeignKey(
         Team, on_delete=models.CASCADE, related_name="map_selected"
     )
@@ -89,9 +74,9 @@ class Match(models.Model):
     winner_team = models.ForeignKey(
         Team, on_delete=models.CASCADE, related_name="matches_winner", null=True
     )
-    map_bans = models.ManyToManyField(MatchMapBan, related_name="matches_map_bans")
+    map_bans = models.ManyToManyField(MapBan, related_name="matches_map_bans")
     map_picks = models.ManyToManyField(
-        MatchMapSelected, related_name="matches_map_picks"
+        MapPick, related_name="matches_map_picks"
     )
     num_maps = models.PositiveIntegerField(default=1)
     maplist = models.JSONField(null=True)
@@ -101,7 +86,10 @@ class Match(models.Model):
     players_per_team = models.PositiveIntegerField(default=5)
     cvars = models.JSONField(null=True)
     message_id = models.CharField(max_length=255, null=True)
-    author_id = models.CharField(max_length=255, null=True)
+    author = models.ForeignKey("players.DiscordUser", on_delete=models.CASCADE, related_name="matches", null=True)
+    server = models.ForeignKey(
+        "servers.Server", on_delete=models.CASCADE, related_name="matches", null=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -136,10 +124,14 @@ class Match(models.Model):
         return config
 
     def get_connect_command(self):
-        return f"connect {settings.RCON_HOST}:{settings.SERVER_PORT}; password {settings.SERVER_PASSWORD};"
+        if not self.server:
+            return ""
+        return self.server.get_connect_string()
 
     def get_load_match_command(self):
-        api_key_header = '"X-Api-Key"'
-        api_key = f'"{settings.API_KEY}"'
+        api_key_header = '"Token"'
+        user = UserModel.objects.get(player__discord_user=self.author)
+        token = Token.objects.get(user=user)
+        api_key = f'"{token.key}"'
         match_url = f'"{settings.HOST_URL}/api/matches/{self.pk}/config/"'
         return f"matchzy_loadmatch_url {match_url} {api_key_header} {api_key}"
