@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from matches.models import (
@@ -12,7 +13,7 @@ from matches.serializers import (
     MapSerializer,
     MatchConfigSerializer,
     MatchMapSelectedSerializer,
-    MatchSerializer,
+    MatchSerializer, CreateMatchSerializer, MatchBanMapSerializer, MatchPickMapSerializer, MatchPlayerJoin,
 )
 from matches.utils import (
     ban_map,
@@ -30,6 +31,10 @@ class MatchViewSet(viewsets.ModelViewSet):
     queryset = Match.objects.all()
     serializer_class = MatchSerializer
 
+    @extend_schema(
+        request=CreateMatchSerializer,
+        responses={200: MatchSerializer}
+    )
     def create(self, request, *args, **kwargs):
         return create_match(request)
 
@@ -41,10 +46,18 @@ class MatchViewSet(viewsets.ModelViewSet):
     def webhook(self, request):
         return process_webhook(request)
 
+    @extend_schema(
+        request=MatchBanMapSerializer,
+        responses={200: dict}
+    )
     @action(detail=True, methods=["POST"])
     def map_ban(self, request, pk):
         return ban_map(request, pk)
 
+    @extend_schema(
+        request=MatchPickMapSerializer,
+        responses={200: dict}
+    )
     @action(detail=True, methods=["POST"])
     def map_pick(self, request, pk):
         return pick_map(request, pk)
@@ -57,6 +70,9 @@ class MatchViewSet(viewsets.ModelViewSet):
     def shuffle_teams(self, request, pk):
         return shuffle_teams(request, pk)
 
+    @extend_schema(
+        responses={200: MapBanSerializer}
+    )
     @action(detail=True, methods=["GET"])
     def bans(self, request, pk):
         match: Match = self.get_object()
@@ -70,6 +86,9 @@ class MatchViewSet(viewsets.ModelViewSet):
         serializer = MapBanSerializer(queryset, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        responses={200: MatchMapSelectedSerializer}
+    )
     @action(detail=True, methods=["GET"])
     def picks(self, request, pk):
         match: Match = self.get_object()
@@ -83,10 +102,17 @@ class MatchViewSet(viewsets.ModelViewSet):
         serializer = MatchMapSelectedSerializer(queryset, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        request=MatchPlayerJoin,
+        responses={200: MatchSerializer}
+    )
     @action(detail=True, methods=["POST"])
     def join(self, request, pk):
         return join_match(request, pk)
 
+    @extend_schema(
+        responses={200: MatchConfigSerializer}
+    )
     @action(detail=True, methods=["GET"], permission_classes=[IsAuthenticated])
     def config(self, request, pk):
         match = self.get_object()

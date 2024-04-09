@@ -8,5 +8,4 @@ urlpatterns = [
     path("steam/", views.redirect_to_steam, name="redirect_to_steam"),
     path("steam/callback", views.steam_callback, name="steam_callback"),
     path("success/", views.success, name="success"),
-    path("join/", views.join, name="join"),
 ]

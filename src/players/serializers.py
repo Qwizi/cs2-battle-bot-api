@@ -1,4 +1,4 @@
-from players.models import Player, Team
+from players.models import Player, Team, DiscordUser, SteamUser
 from rest_framework import serializers
 
 
@@ -14,4 +14,15 @@ class TeamSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Team
+        fields = "__all__"
+
+class DiscordUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DiscordUser
+        fields = "__all__"
+
+
+class SteamUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SteamUser
         fields = "__all__"

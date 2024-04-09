@@ -27,5 +27,8 @@ class Server(models.Model):
         except (TimeoutError, ConnectionRefusedError):
             return False
 
+    def get_join_link(self):
+        return f"steam://connect/{self.ip}:{self.port}/{self.password}"
+
     def __str__(self):
         return f"<{self.ip}:{self.port} - {self.name}>"

@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
+from rest_framework.authentication import TokenAuthentication
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -52,24 +54,26 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_api_key",
     "rest_framework.authtoken",
-    "drf_yasg"
+    "drf_spectacular"
 ]
 
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework_api_key.permissions.HasAPIKey",
+        "accounts.auth.HasAPIKey",
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
            'rest_framework.authentication.TokenAuthentication',
+           #'accounts.auth.BearerTokenAuthentication',
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.QueryParameterVersioning",
     "DEFAULT_VERSION": "2.0",
     "ALLOWED_VERSIONS": ["2.0"],
     "PAGE_SIZE": 15,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
-API_KEY_CUSTOM_HEADER = "HTTP_X_API_KEY"
+# API_KEY_CUSTOM_HEADER = "Bearer"
 
 
 MIDDLEWARE = [

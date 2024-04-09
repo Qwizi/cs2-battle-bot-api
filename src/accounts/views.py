@@ -99,11 +99,3 @@ def steam_callback(request):
 
 def success(request):
     return render(request, "accounts/success.html")
-
-
-class CustomSchemeRedirect(HttpResponsePermanentRedirect):
-    allowed_schemes = ["steam"]
-
-
-def join(request):
-    return CustomSchemeRedirect("steam://connect/146.59.53.13:27015/changeme")

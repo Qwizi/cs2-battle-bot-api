@@ -1,5 +1,9 @@
 from django.conf import settings
 import httpx
+from rest_framework.authentication import TokenAuthentication
+from rest_framework_api_key.models import APIKey
+from rest_framework_api_key.permissions import KeyParser, BaseHasAPIKey
+
 from accounts.schemas import SteamAuthSchema
 from steam.webapi import WebAPI
 from steam.steamid import SteamID
@@ -24,7 +28,7 @@ class SteamAuthService:
     """
 
     def __init__(
-        self,
+            self,
     ) -> None:
         """Initialize the SteamAuthService."""
         self.auth_url = "https://steamcommunity.com/openid/login"
@@ -207,3 +211,14 @@ class DiscordAuthService:
                 url="https://discord.com/api/users/@me", headers=headers
             )
             return response.json()
+
+
+class BearerTokenAuthentication(TokenAuthentication):
+    keyword = "Bearer"
+
+class BearerKeyParser(KeyParser):
+    keyword = "Bearer"
+
+class HasAPIKey(BaseHasAPIKey):
+    model = APIKey  # Or a custom model
+    key_parser = BearerKeyParser()
