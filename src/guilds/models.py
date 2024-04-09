@@ -13,6 +13,7 @@ class Guild(models.Model):
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="guild_owner"
     )
+    members = models.ManyToManyField("players.DiscordUser", related_name="guild_members")
     lobby_channel = models.CharField(max_length=255, null=True, blank=True)
     team1_channel = models.CharField(max_length=255, null=True, blank=True)
     team2_channel = models.CharField(max_length=255, null=True, blank=True)

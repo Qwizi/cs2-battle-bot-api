@@ -11,6 +11,8 @@ class User(AbstractUser):
         "players.Player", on_delete=models.CASCADE, null=True, blank=True
     )
 
+    REQUIRED_FIELDS = []
+
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance=None, created=False, **kwargs):

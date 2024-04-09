@@ -112,11 +112,10 @@ def create_match(request: Request) -> Response:
     server = None
     if server_id:
         server = get_object_or_404(Server, pk=server_id)
-
-    if not server.check_online():
-        return Response(
-            {"message": "Server is not online. Cannot create match"}, status=400
-        )
+        if not server.check_online():
+            return Response(
+                {"message": "Server is not online. Cannot create match"}, status=400
+            )
     if not check_server_is_available_for_match(server):
         return Response(
             {"message": "Server is not available for a match. Another match is already running"},
@@ -148,14 +147,14 @@ def create_match(request: Request) -> Response:
 
     players_list: list[Player] = []
     for discord_user in discord_users_list:
-        player: Player = Player.objects.get(discord_user=discord_user)
+        player: Player = get_object_or_404(Player, discord_user=discord_user)
         if player.steam_user is None:
             return Response(
                 {
-                    "message": f"Discord user {discord_user.username} has no connected player",
-                    "user_id": discord_user.user_id,
+                        "message": f"Discord user {discord_user.username} has no connected player",
+                        "user_id": discord_user.user_id,
                 },
-                status=404,
+                    status=404,
             )
         players_list.append(player)
 

@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_api_key",
     "rest_framework.authtoken",
+    "drf_yasg"
 ]
 
 REST_FRAMEWORK = {
@@ -182,3 +183,11 @@ SERVER_PASSWORD = os.environ.get("SERVER_PASSWORD", "changeme")
 API_KEY = os.environ.get("API_KEY", "key")
 
 AUTH_USER_MODEL = "accounts.User"  # new
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Basic': {
+            'type': 'basic'
+        }
+    }
+}

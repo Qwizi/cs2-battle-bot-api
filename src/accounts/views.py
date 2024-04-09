@@ -29,12 +29,25 @@ def discord_callback(request):
         return JsonResponse({"error": "Invalid token"}, status=400)
     user_info = discord_auth.get_user_info(token["access_token"])
     request.session["dc_user"] = user_info
-    dc_user, _ = DiscordUser.objects.get_or_create(
-        user_id=user_info["id"], username=user_info["username"]
-    )
-    user, _ = User.objects.get_or_create(
-        username=user_info["username"], email=user_info["email"]
-    )
+    try:
+        dc_user = DiscordUser.objects.get(
+            user_id=user_info["id"], username=user_info["username"]
+        )
+    except DiscordUser.DoesNotExist:
+        dc_user = DiscordUser.objects.create(
+            user_id=user_info["id"], username=user_info["username"]
+        )
+    try:
+        user = User.objects.get(
+            username=user_info["username"]
+        )
+        if not user.email:
+            user.email = user_info["email"]
+            user.save()
+    except User.DoesNotExist:
+        user = User.objects.create(
+            username=user_info["username"], email=user_info["email"]
+        )
     return redirect("/accounts/steam/")
 
 

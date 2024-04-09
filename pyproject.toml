@@ -22,6 +22,7 @@ djangorestframework-api-key = "==2.*"
 rcon = "^2.4.6"
 gunicorn = "^21.2.0"
 django-oauth-toolkit = "^2.3.0"
+drf-yasg = "^1.21.7"
 
 
 [build-system]
