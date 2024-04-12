@@ -129,7 +129,7 @@ class Match(models.Model):
         return self.server.get_connect_string()
 
     def get_load_match_command(self):
-        api_key_header = '"Token"'
+        api_key_header = '"Bearer"'
         user = UserModel.objects.get(player__discord_user=self.author)
         token = Token.objects.get(user=user)
         api_key = f'"{token.key}"'

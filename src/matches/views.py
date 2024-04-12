@@ -1,6 +1,9 @@
 from drf_spectacular.utils import extend_schema
+from rest_framework.parsers import FileUploadParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from matches.models import (
     Map,
     Match,
@@ -14,6 +17,7 @@ from matches.serializers import (
     MatchConfigSerializer,
     MatchMapSelectedSerializer,
     MatchSerializer, CreateMatchSerializer, MatchBanMapSerializer, MatchPickMapSerializer, MatchPlayerJoin,
+    MatchBanMapResultSerializer, MatchPickMapResultSerializer,
 )
 from matches.utils import (
     ban_map,
@@ -48,18 +52,18 @@ class MatchViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         request=MatchBanMapSerializer,
-        responses={200: dict}
+        responses={200: MatchBanMapResultSerializer}
     )
     @action(detail=True, methods=["POST"])
-    def map_ban(self, request, pk):
+    def ban(self, request, pk):
         return ban_map(request, pk)
 
     @extend_schema(
         request=MatchPickMapSerializer,
-        responses={200: dict}
+        responses={200: MatchPickMapResultSerializer}
     )
     @action(detail=True, methods=["POST"])
-    def map_pick(self, request, pk):
+    def pick(self, request, pk):
         return pick_map(request, pk)
 
     @action(detail=True, methods=["POST"])
@@ -67,7 +71,7 @@ class MatchViewSet(viewsets.ModelViewSet):
         return recreate_match(request, pk)
 
     @action(detail=True, methods=["POST"])
-    def shuffle_teams(self, request, pk):
+    def shuffle(self, request, pk):
         return shuffle_teams(request, pk)
 
     @extend_schema(

@@ -1,6 +1,8 @@
 from django.db import models
 from prefix_id import PrefixIDField
 from steam import game_servers as gs
+
+
 class Server(models.Model):
     id = PrefixIDField(primary_key=True, prefix="server")
     ip = models.CharField(max_length=100)
@@ -15,7 +17,6 @@ class Server(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
 
     def get_connect_string(self):
         return f"connect {self.ip}:{self.port}; password {self.password};"

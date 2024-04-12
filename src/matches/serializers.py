@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from matches.models import Map, MapBan, MapPick, Match, MatchType
 from players.serializers import TeamSerializer
+from servers.serializers import ServerSerializer
 
 
 class MatchEventEnum(str, Enum):
@@ -71,6 +72,8 @@ class MatchSerializer(serializers.ModelSerializer):
     load_match_command = serializers.CharField(
         read_only=True, source="get_load_match_command"
     )
+
+    server = ServerSerializer(read_only=True)
 
     class Meta:
         model = Match
@@ -159,6 +162,20 @@ class MatchBanMapSerializer(serializers.Serializer):
 
 class MatchPickMapSerializer(MatchBanMapSerializer):
     pass
+
+
+class MatchBanMapResultSerializer(serializers.Serializer):
+    banned_map: serializers.CharField()
+    next_ban_team_leader: serializers.CharField()
+    maps_left: serializers.ListField(child=serializers.CharField())
+    map_bans_count: serializers.IntegerField()
+
+
+class MatchPickMapResultSerializer(serializers.Serializer):
+    picked_map: serializers.CharField()
+    next_pick_team_leader: serializers.CharField()
+    maps_left: serializers.ListField(child=serializers.CharField())
+    map_picks_count: serializers.IntegerField()
 
 
 class MatchPlayerJoin(serializers.Serializer):

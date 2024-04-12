@@ -27,7 +27,7 @@ from matches.serializers import (
     MatchEventSeriesStartSerializer,
     MatchPickMapSerializer,
     MatchPlayerJoin,
-    MatchSerializer,
+    MatchSerializer, MatchBanMapResultSerializer, MatchPickMapResultSerializer,
 )
 from players.models import DiscordUser, Player, Team
 from players.utils import create_default_teams, divide_players
@@ -180,18 +180,18 @@ def create_match(request: Request) -> Response:
     user = UserModel.objects.get(player__discord_user__pk=author.pk)
     token = Token.objects.get(user=user)
     webhook_url = f"{settings.HOST_URL}/api/matches/{new_match.id}/webhook/"
-    header_key = "Token"
+    header_key = "Bearer"
     token_key = token.key
     if not cvars:
         cvars = {
-            "matchzy_remote_log_url": header_key,
-            "matchzy_remote_log_header_key": webhook_url,
+            "matchzy_remote_log_url": webhook_url,
+            "matchzy_remote_log_header_key": header_key,
             "matchzy_remote_log_header_value": token_key,
         }
     else:
         cvars["matchzy_remote_log_url"] = webhook_url
-        cvars["matchzy_remote_log_header_key"] = token_key
-        cvars["matchzy_remote_log_header_value"] = token.key
+        cvars["matchzy_remote_log_header_key"] = header_key
+        cvars["matchzy_remote_log_header_value"] = token_key
     new_match.cvars = cvars
 
     new_match.maps.set(maps)
@@ -324,16 +324,20 @@ def ban_map(request: Request, pk: int) -> Response:
     maplist.remove(map.tag)
     match.maplist = maplist
     match.save()
-    match_serializer = MatchSerializer(match)
-    return Response({
-        "banned_map": map.tag,
-        "next_ban_team_leader": match.team1.leader.discord_user.username if match.team2 == user_team else match.team2.leader.discord_user.username,
-        "maps_left": match.maplist,
-        "map_bans_count": match.map_bans.count(),
-    }, status=201)
+    map_ban_result_serializer = MatchBanMapResultSerializer(
+        data={
+            "banned_map": map.tag,
+            "next_ban_team_leader": match.team1.leader.discord_user.username
+            if match.team2 == user_team
+            else match.team2.leader.discord_user.username,
+            "maps_left": match.maplist,
+            "map_bans_count": match.map_bans.count(),
+        }
+    )
+    return Response(map_ban_result_serializer.data, status=200)
 
 
-def pick_map(request: Request, pk: int) -> Response:
+def pick_map(request: Request, pk: int) -> Response["MatchPickMapResultSerializer"]:
     """
     Pick a map for the match.
 
@@ -416,12 +420,17 @@ def pick_map(request: Request, pk: int) -> Response:
         match.maplist.insert(1, map.tag)
 
     match.save()
-    return Response({
-        "picked_map": map.tag,
-        "next_pick_team_leader": match.team1.leader.discord_user.username if match.team2 == user_team else match.team2.leader.discord_user.username,
-        "maps_left": match.maplist,
-        "map_picks_count": map_picks_count,
-    }, status=201)
+    map_pick_result_serializer = MatchPickMapResultSerializer(
+        {
+            "picked_map": map.tag,
+            "next_pick_team_leader": match.team1.leader.discord_user.username
+            if match.team2 == user_team
+            else match.team2.leader.discord_user.username,
+            "maps_left": match.maplist,
+            "map_picks_count": map_picks_count,
+        }
+    )
+    return Response(map_pick_result_serializer.data, status=200)
 
 
 def shuffle_teams(pk: int) -> Response:
