@@ -3,10 +3,12 @@ from django.contrib.auth.models import AbstractUser
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from prefix_id import PrefixIDField
 from rest_framework.authtoken.models import Token
 
 
 class User(AbstractUser):
+    id = PrefixIDField(primary_key=True, prefix="user")
     player = models.ForeignKey(
         "players.Player", on_delete=models.CASCADE, null=True, blank=True
     )

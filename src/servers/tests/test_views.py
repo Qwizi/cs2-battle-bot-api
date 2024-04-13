@@ -153,3 +153,11 @@ def test_get_servers_list_with_guild_filter(client_with_api_key, server_data, gu
 
     # Ensure that the rcon_password is not exposed
     assert "rcon_password" not in response.data["results"][0]
+
+@pytest.mark.django_db
+def test_delete_server(client_with_api_key, server_data):
+    server = Server.objects.create(**server_data)
+    response = client_with_api_key.delete(f"{API_ENDPOINT}{server.id}/")
+    assert response.status_code == 204
+    assert Server.objects.count() == 0
+    assert not Server.objects.filter(id=server.id).exists()

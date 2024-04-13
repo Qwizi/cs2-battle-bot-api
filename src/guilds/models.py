@@ -22,6 +22,7 @@ class GuildManager(models.Manager):
         for member in guild_discord_members:
             user, _ = UserModel.objects.get_or_create(username=member.username)
         guild = self.create(owner=owner_user, **kwargs)
+        guild_discord_members.append(dc_owner_user)
         guild.members.set(guild_discord_members)
         guild.save()
         return guild

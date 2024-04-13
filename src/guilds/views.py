@@ -13,7 +13,7 @@ class GuildViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         request=CreateGuildSerializer,
-        responses={200: GuildSerializer}
+        responses={201: GuildSerializer}
     )
     def create(self, request, *args, **kwargs):
         return create_guild(request)

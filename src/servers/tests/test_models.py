@@ -11,7 +11,6 @@ def test_create_server(server_data):
     assert server.port == server_data["port"]
     assert server.password == server_data["password"]
     assert server.rcon_password == server_data["rcon_password"]
-    assert server.max_players == server_data["max_players"]
     assert server.is_public == server_data["is_public"]
 
 
@@ -29,7 +28,7 @@ def test_check_online_server(valid, server_data):
         cs2_server_query = r"\appid\730\empty\1\secure\1"
         server_addr = next(gs.query_master(cs2_server_query))  # single CS2 Server
         server = Server.objects.create(
-            ip=server_addr[0], port=server_addr[1], name="Test server", max_players=12
+            ip=server_addr[0], port=server_addr[1], name="Test server"
         )
         assert server.check_online() is True
     else:

@@ -52,18 +52,14 @@ def create_guild(request) -> Response["GuildSerializer"]:
     owner_id = serializer.validated_data["owner_id"]
     owner_username = serializer.validated_data["owner_username"]
     members = serializer.validated_data["members"]
-
-    owner, dc_user = create_user(owner_id, owner_username)
-    users = [create_user(member["user_id"], member["username"]) for member in members]
-    dc_users = [dc_user for user, dc_user in users]
-    dc_users.append(dc_user)
-    guild = Guild.objects.create(
+    guild = Guild.objects.create_guild(
         name=serializer.validated_data["name"],
         guild_id=serializer.validated_data["guild_id"],
-        owner=owner,
+        owner_id=owner_id,
+        owner_username=owner_username,
+        members=members
     )
-    guild.members.set(dc_users)
-    return Response(GuildSerializer(guild).data)
+    return Response(GuildSerializer(guild).data, status=201)
 
 
 def add_guild_member(guild: Guild, request) -> Response["GuildSerializer"]:
