@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
+import toml
 from rest_framework.authentication import TokenAuthentication
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -189,10 +190,19 @@ API_KEY = os.environ.get("API_KEY", "key")
 
 AUTH_USER_MODEL = "accounts.User"  # new
 
-SWAGGER_SETTINGS = {
-    'SECURITY_DEFINITIONS': {
-        'Basic': {
-            'type': 'basic'
-        }
-    }
-}
+
+def get_spectacular_settings():
+    # Load the pyproject.toml file
+    pyproject_data = toml.load(Path(__file__).resolve().parent.parent.parent / "pyproject.toml")
+
+    # Get the name, version, and description
+    name = pyproject_data.get("tool", {}).get("poetry", {}).get("name", "")
+    version = pyproject_data.get("tool", {}).get("poetry", {}).get("version", "")
+    description = pyproject_data.get("tool", {}).get("poetry", {}).get("description", "")
+
+    # Assign them to the SPECTACULAR_SETTINGS dictionary
+    return {"TITLE": name, "VERSION": version, "DESCRIPTION": description}
+
+
+# Use the function
+SPECTACULAR_SETTINGS = get_spectacular_settings()
