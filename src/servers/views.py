@@ -14,6 +14,7 @@ class CustomSchemeRedirect(HttpResponsePermanentRedirect):
 class ServerViewSet(viewsets.ModelViewSet):
     queryset = Server.objects.all()
     serializer_class = ServerSerializer
+    filterset_fields = ["guild", "is_public"]
 
     @action(detail=True, methods=["GET"], permission_classes=[AllowAny])
     def join(self, request, pk=None):

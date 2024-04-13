@@ -10,7 +10,6 @@ class Server(models.Model):
     port = models.PositiveIntegerField()
     password = models.CharField(max_length=100, null=True, blank=True)
     rcon_password = models.CharField(max_length=100, null=True, blank=True)
-    max_players = models.PositiveIntegerField()
     is_public = models.BooleanField(default=False)
     guild = models.ForeignKey(
         "guilds.Guild", on_delete=models.CASCADE, related_name="servers", null=True, blank=True
