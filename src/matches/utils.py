@@ -77,7 +77,7 @@ def check_server_is_available_for_match(server: Server) -> bool:
     --------
         bool: True if the server is available, False otherwise.
     """
-    if Match.objects.filter(server=server, status=MatchStatus.LIVE).exists() or Match.objects.filter(server=server,                                                                             status=MatchStatus.STARTED).exists():
+    if Match.objects.filter(server=server, status=MatchStatus.LIVE).exists() or Match.objects.filter(server=server, status=MatchStatus.STARTED).exists():
         return False
     return True
 
@@ -95,15 +95,13 @@ def create_match(request: Request) -> Response:
         Response: Response object.
     """
     serializer = CreateMatchSerializer(data=request.data)
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=400)
+    serializer.is_valid(raise_exception=True)
     discord_users_ids = serializer.validated_data.get("discord_users_ids")
     match_type = serializer.validated_data.get("match_type", "BO1")
     clinch_series = serializer.validated_data.get("clinch_series", False)
     map_sides = serializer.validated_data.get(
         "map_sides", ["knife", "team1_ct", "team2_ct"]
     )
-    cvars = serializer.validated_data.get("cvars", None)
     discord_users_ids = list(set(discord_users_ids))
     author_id = serializer.validated_data.get("author_id")
     server_id = serializer.validated_data.get("server_id")
@@ -116,7 +114,7 @@ def create_match(request: Request) -> Response:
             return Response(
                 {"message": "Server is not online. Cannot create match"}, status=400
             )
-    if not check_server_is_available_for_match(server):
+    if not Match.objects.check_server_is_available_for_match(server):
         return Response(
             {"message": "Server is not available for a match. Another match is already running"},
             status=400,
@@ -159,45 +157,54 @@ def create_match(request: Request) -> Response:
         players_list.append(player)
 
     team1, team2 = create_default_teams("Team 1", "Team 2", players_list)
-    maps = Map.objects.all()
-
-    num_maps = 1 if match_type == MatchType.BO1 else 3
-    player_per_team = len(players_list) / 2
-    players_per_team_rounded = math.ceil(player_per_team)
-
-    new_match = Match.objects.create(
-        author=author,
-        type=match_type,
+    # maps = Map.objects.all()
+    #
+    # num_maps = 1 if match_type == MatchType.BO1 else 3
+    # player_per_team = len(players_list) / 2
+    # players_per_team_rounded = math.ceil(player_per_team)
+    #
+    # new_match = Match.objects.create(
+    #     author=author,
+    #     type=match_type,
+    #     team1=team1,
+    #     team2=team2,
+    #     players_per_team=players_per_team_rounded,
+    #     num_maps=num_maps,
+    #     maplist=[map.tag for map in maps],
+    #     map_sides=map_sides,
+    #     cvars=cvars,
+    #     clinch_series=clinch_series,
+    # )
+    # user = UserModel.objects.get(player__discord_user__pk=author.pk)
+    # token = Token.objects.get(user=user)
+    # webhook_url = f"{settings.HOST_URL}/api/matches/{new_match.id}/webhook/"
+    # header_key = "Bearer"
+    # token_key = token.key
+    # if not cvars:
+    #     cvars = {
+    #         "matchzy_remote_log_url": webhook_url,
+    #         "matchzy_remote_log_header_key": header_key,
+    #         "matchzy_remote_log_header_value": token_key,
+    #     }
+    # else:
+    #     cvars["matchzy_remote_log_url"] = webhook_url
+    #     cvars["matchzy_remote_log_header_key"] = header_key
+    #     cvars["matchzy_remote_log_header_value"] = token_key
+    # new_match.cvars = cvars
+    #
+    # new_match.maps.set(maps)
+    # if server:
+    #     new_match.server = server
+    # new_match.save()
+    new_match = Match.objects.create_match(
         team1=team1,
         team2=team2,
-        players_per_team=players_per_team_rounded,
-        num_maps=num_maps,
-        maplist=[map.tag for map in maps],
-        map_sides=map_sides,
-        cvars=cvars,
+        author=author,
+        type=match_type,
         clinch_series=clinch_series,
+        map_sides=map_sides,
+        server=server,
     )
-    user = UserModel.objects.get(player__discord_user__pk=author.pk)
-    token = Token.objects.get(user=user)
-    webhook_url = f"{settings.HOST_URL}/api/matches/{new_match.id}/webhook/"
-    header_key = "Bearer"
-    token_key = token.key
-    if not cvars:
-        cvars = {
-            "matchzy_remote_log_url": webhook_url,
-            "matchzy_remote_log_header_key": header_key,
-            "matchzy_remote_log_header_value": token_key,
-        }
-    else:
-        cvars["matchzy_remote_log_url"] = webhook_url
-        cvars["matchzy_remote_log_header_key"] = header_key
-        cvars["matchzy_remote_log_header_value"] = token_key
-    new_match.cvars = cvars
-
-    new_match.maps.set(maps)
-    if server:
-        new_match.server = server
-    new_match.save()
     new_match_serializer = MatchSerializer(new_match)
     return Response(new_match_serializer.data, status=201)
 

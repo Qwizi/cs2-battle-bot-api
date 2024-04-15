@@ -1,5 +1,7 @@
 import pytest
 
+from servers.models import Server
+
 
 @pytest.fixture
 def server_data():
@@ -11,3 +13,7 @@ def server_data():
         "rcon_password": "changeme",
         "is_public": True,
     }
+
+@pytest.fixture
+def server(server_data):
+    return Server.objects.create(**server_data)

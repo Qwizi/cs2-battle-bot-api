@@ -15,3 +15,11 @@ def client_with_api_key():
     client.credentials(HTTP_AUTHORIZATION='Bearer ' + key)
     client.defaults["Authorization"] = f"Bearer {key}"
     return client
+
+
+@pytest.fixture
+def client_with_token(default_author):
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION='Bearer ' + default_author.get_token())
+    client.defaults["Authorization"] = f"Bearer {default_author.get_token()}"
+    return client

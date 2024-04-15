@@ -7,6 +7,7 @@ from cs2_battle_bot.tests.conftest import api_client, client_with_api_key
 
 API_ENDPOINT = "/api/steam-users/"
 
+
 @pytest.mark.django_db
 @pytest.mark.parametrize("methods", ["get", "post", "put", "patch", "delete"])
 def test_steam_user_unauthorized(methods, api_client, steam_user_data):
@@ -55,6 +56,7 @@ def test_get_steam_users_list(client_with_api_key, steam_user_data):
     assert response.data["next"] is None
     assert response.data["previous"] is None
 
+
 @pytest.mark.django_db
 def test_get_steam_user(client_with_api_key, steam_user_data):
     steam_user = SteamUser.objects.create(**steam_user_data)
@@ -66,6 +68,7 @@ def test_get_steam_user(client_with_api_key, steam_user_data):
     assert response.data["profile_url"] == steam_user_data["profile_url"]
     assert response.data["avatar"] == steam_user_data["avatar"]
 
+
 @pytest.mark.django_db
 def test_create_steam_user(client_with_api_key, steam_user_data):
     response = client_with_api_key.post(API_ENDPOINT, steam_user_data)
@@ -75,6 +78,7 @@ def test_create_steam_user(client_with_api_key, steam_user_data):
     assert response.data["steamid32"] == steam_user_data["steamid32"]
     assert response.data["profile_url"] == steam_user_data["profile_url"]
     assert response.data["avatar"] == steam_user_data["avatar"]
+
 
 @pytest.mark.django_db
 def test_delete_steam_user(client_with_api_key, steam_user_data):
