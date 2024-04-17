@@ -1,5 +1,7 @@
 import pytest
 
+from guilds.models import Guild
+
 
 @pytest.fixture
 def guild_data():
@@ -12,3 +14,8 @@ def guild_data():
             {"username": "qwizi2", "user_id": "1133332759834787860"},
         ]
     }
+
+
+@pytest.fixture
+def guild(guild_data):
+    return Guild.objects.create_guild(**guild_data)

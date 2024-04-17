@@ -171,7 +171,11 @@ def teams() -> tuple[Team, Team]:
 def teams_with_players(teams, players):
     team1, team2 = teams
     team1.players.add(*players[:5])
+    team1.leader = players[0]
+    team1.save()
     team2.players.add(*players[5:])
+    team2.leader = players[5]
+    team2.save()
     print(team1.players.count())
     print(team2.players.count())
     return team1, team2

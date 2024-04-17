@@ -4,6 +4,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.auth import BearerTokenAuthentication
 from matches.models import (
     Map,
     Match,
@@ -11,6 +12,7 @@ from matches.models import (
 from rest_framework import viewsets
 from rest_framework.decorators import action
 
+from matches.permissions import IsAuthor
 from matches.serializers import (
     MapBanSerializer,
     MapSerializer,
@@ -32,7 +34,7 @@ from matches.utils import (
 
 
 class MatchViewSet(viewsets.ModelViewSet):
-    queryset = Match.objects.all()
+    queryset = Match.objects.all().order_by("created_at")
     serializer_class = MatchSerializer
 
     @extend_schema(
@@ -117,7 +119,7 @@ class MatchViewSet(viewsets.ModelViewSet):
     @extend_schema(
         responses={200: MatchConfigSerializer}
     )
-    @action(detail=True, methods=["GET"], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=["GET"], permission_classes=[IsAuthor], authentication_classes=[BearerTokenAuthentication])
     def config(self, request, pk):
         match = self.get_object()
         serializer = MatchConfigSerializer(data=match.get_config())
@@ -127,5 +129,5 @@ class MatchViewSet(viewsets.ModelViewSet):
 
 
 class MapViewSet(viewsets.ModelViewSet):
-    queryset = Map.objects.all()
+    queryset = Map.objects.all().order_by("created_at")
     serializer_class = MapSerializer

@@ -12,7 +12,7 @@ class CustomSchemeRedirect(HttpResponsePermanentRedirect):
 
 
 class ServerViewSet(viewsets.ModelViewSet):
-    queryset = Server.objects.all()
+    queryset = Server.objects.all().order_by("created_at")
     serializer_class = ServerSerializer
     filterset_fields = ["guild", "is_public"]
 

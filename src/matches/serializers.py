@@ -2,6 +2,7 @@ from enum import Enum
 import re
 from rest_framework import serializers
 
+from guilds.serializers import GuildSerializer
 from matches.models import Map, MapBan, MapPick, Match, MatchType
 from players.serializers import TeamSerializer
 from servers.serializers import ServerSerializer
@@ -74,6 +75,7 @@ class MatchSerializer(serializers.ModelSerializer):
     )
 
     server = ServerSerializer(read_only=True)
+    guild = GuildSerializer(read_only=True)
 
     class Meta:
         model = Match
@@ -85,10 +87,10 @@ class CreateMatchSerializer(serializers.Serializer):
     discord_users_ids = serializers.ListField(child=serializers.CharField())
     author_id = serializers.CharField(required=True)
     server_id = serializers.CharField(required=False)
+    guild_id = serializers.CharField(required=True)
     match_type = serializers.ChoiceField(
         choices=MatchType.choices, default=MatchType.BO1
     )
-    players_per_team = serializers.IntegerField(required=False, default=5)
     clinch_series = serializers.BooleanField(required=False, default=False)
     map_sides = serializers.ListField(
         child=serializers.ChoiceField(
@@ -165,17 +167,17 @@ class MatchPickMapSerializer(MatchBanMapSerializer):
 
 
 class MatchBanMapResultSerializer(serializers.Serializer):
-    banned_map: serializers.CharField()
-    next_ban_team_leader: serializers.CharField()
-    maps_left: serializers.ListField(child=serializers.CharField())
-    map_bans_count: serializers.IntegerField()
+    banned_map = serializers.CharField(required=True)
+    next_ban_team_leader = serializers.CharField(required=True)
+    maps_left = serializers.ListField(child=serializers.CharField(required=True))
+    map_bans_count = serializers.IntegerField(required=True)
 
 
 class MatchPickMapResultSerializer(serializers.Serializer):
-    picked_map: serializers.CharField()
-    next_pick_team_leader: serializers.CharField()
-    maps_left: serializers.ListField(child=serializers.CharField())
-    map_picks_count: serializers.IntegerField()
+    picked_map = serializers.CharField()
+    next_pick_team_leader = serializers.CharField()
+    maps_left = serializers.ListField(child=serializers.CharField())
+    map_picks_count = serializers.IntegerField()
 
 
 class MatchPlayerJoin(serializers.Serializer):

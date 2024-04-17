@@ -3,6 +3,7 @@ import math
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.db.models import Q
 from prefix_id import PrefixIDField
 from rest_framework.authtoken.models import Token
 
@@ -68,6 +69,7 @@ class MatchManager(models.Manager):
         author = kwargs.pop("author", None)
         server = kwargs.pop("server", None)
         num_maps = kwargs.pop("num_maps", 1 if match_type == MatchType.BO1 else 3)
+        cvars = kwargs.pop("cvars", None)
         players_list = team1.players.all() | team2.players.all()
         player_per_team = len(players_list) / 2
         players_per_team_rounded = math.ceil(player_per_team)
@@ -82,6 +84,7 @@ class MatchManager(models.Manager):
             players_per_team=players_per_team_rounded,
             server=server,
             author=author,
+            cvars=cvars,
         )
         match.maps.set(maps)
         match.create_webhook_cvars()
@@ -89,9 +92,10 @@ class MatchManager(models.Manager):
         return match
 
     def check_server_is_available_for_match(self, server):
-        return self.filter(
-            server=server, status=MatchStatus.LIVE).exists() \
-            or self.filter(server=server, status=MatchStatus.STARTED).exists()
+        return not self.filter(
+            Q(server=server) &
+            (Q(status=MatchStatus.LIVE) | Q(status=MatchStatus.STARTED))
+        ).exists()
 
 # Create your models here.
 class Match(models.Model):
@@ -128,6 +132,7 @@ class Match(models.Model):
     server = models.ForeignKey(
         "servers.Server", on_delete=models.CASCADE, related_name="matches", null=True
     )
+    guild = models.ForeignKey("guilds.Guild", on_delete=models.CASCADE, related_name="matches", null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -137,7 +142,7 @@ class Match(models.Model):
 
     @property
     def webhook_url(self):
-        return f"{settings.HOST_URL}/api/matches/{self.pk}/webhook/"
+        return f"{settings.HOST_URL}/api/matches/webhook/"
 
     @property
     def api_key_header(self):
@@ -196,3 +201,24 @@ class Match(models.Model):
 
     def get_maps_tags(self):
         return [map.tag for map in self.maps.all()]
+
+    def ban_map(self, team, map):
+        self.map_bans.add(MapBan.objects.create(team=team, map=map))
+        self.maps.remove(map)
+        self.maplist.remove(map.tag)
+        self.save()
+        return self
+
+    def pick_map(self, team, map):
+        map_selected = MapPick.objects.create(team=team, map=map)
+        self.map_picks.add(map_selected)
+        map_index = self.maplist.index(map.tag)
+        self.maplist.pop(map_index)
+        map_picks_count = self.map_picks.count()
+        if map_picks_count == 1:
+            self.maplist.insert(0, map.tag)
+        else:
+            self.maplist.insert(1, map.tag)
+
+        self.save()
+        return self

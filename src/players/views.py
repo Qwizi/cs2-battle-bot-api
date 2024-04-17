@@ -4,20 +4,20 @@ from players.serializers import PlayerSerializer, TeamSerializer, DiscordUserSer
 
 
 class PlayerViewSet(viewsets.ModelViewSet):
-    queryset = Player.objects.all()
+    queryset = Player.objects.all().order_by("created_at")
     serializer_class = PlayerSerializer
 
 
 class DiscordUserViewSet(viewsets.ModelViewSet):
-    queryset = DiscordUser.objects.all()
+    queryset = DiscordUser.objects.all().order_by("created_at")
     serializer_class = DiscordUserSerializer
 
 
 class SteamUserViewSet(viewsets.ModelViewSet):
-    queryset = SteamUser.objects.all()
+    queryset = SteamUser.objects.all().order_by("created_at")
     serializer_class = SteamUserSerializer
 
 
 class TeamViewSet(viewsets.ModelViewSet):
-    queryset = Team.objects.all()
+    queryset = Team.objects.all().order_by("created_at")
     serializer_class = TeamSerializer

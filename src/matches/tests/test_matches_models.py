@@ -65,7 +65,7 @@ def test_match_model(teams_with_players, default_author, with_server, match_type
     assert new_match.load_match_command_name == "matchzy_loadmatch_url"
     assert new_match.api_key_header == "Bearer"
 
-    assert new_match.webhook_url == f"{settings.HOST_URL}/api/matches/{new_match.pk}/webhook/"
+    assert new_match.webhook_url == f"{settings.HOST_URL}/api/matches/webhook/"
     assert new_match.get_load_match_command() == f'matchzy_loadmatch_url "{new_match.config_url}" "Bearer" "{author_token}"'
 
 
