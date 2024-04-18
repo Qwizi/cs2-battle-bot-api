@@ -62,7 +62,6 @@ class MatchConfigSerializer(serializers.Serializer):
 class MatchSerializer(serializers.ModelSerializer):
     team1 = TeamSerializer(read_only=True)
     team2 = TeamSerializer(read_only=True)
-    winner_team = TeamSerializer(read_only=True)
     maps = MapSerializer(many=True, read_only=True)
 
     map_bans = MapBanSerializer(many=True, read_only=True)

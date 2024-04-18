@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "cs2-battle-bot-api",
-        "version": "0.0.7"
+        "version": "0.0.8"
     },
     "paths": {
         "/api/discord-users/": {
@@ -759,7 +759,7 @@
                     }
                 ],
                 "responses": {
-                    "200": {
+                    "201": {
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2713,14 +2713,6 @@
                         ],
                         "readOnly": true
                     },
-                    "winner_team": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/Team"
-                            }
-                        ],
-                        "readOnly": true
-                    },
                     "maps": {
                         "type": "array",
                         "items": {
@@ -2811,6 +2803,10 @@
                         "format": "date-time",
                         "readOnly": true
                     },
+                    "winner_team": {
+                        "type": "string",
+                        "nullable": true
+                    },
                     "author": {
                         "type": "string",
                         "nullable": true
@@ -2828,8 +2824,7 @@
                     "server",
                     "team1",
                     "team2",
-                    "updated_at",
-                    "winner_team"
+                    "updated_at"
                 ]
             },
             "MatchBanMap": {
@@ -3403,14 +3398,6 @@
                         ],
                         "readOnly": true
                     },
-                    "winner_team": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/Team"
-                            }
-                        ],
-                        "readOnly": true
-                    },
                     "maps": {
                         "type": "array",
                         "items": {
@@ -3500,6 +3487,10 @@
                         "type": "string",
                         "format": "date-time",
                         "readOnly": true
+                    },
+                    "winner_team": {
+                        "type": "string",
+                        "nullable": true
                     },
                     "author": {
                         "type": "string",

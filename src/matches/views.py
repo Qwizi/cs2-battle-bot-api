@@ -40,7 +40,7 @@ class MatchViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         request=CreateMatchSerializer,
-        responses={200: MatchSerializer}
+        responses={201: MatchSerializer}
 
     )
     def create(self, request, *args, **kwargs):
