@@ -11,16 +11,6 @@
     },
     {
         "model": "players.discorduser",
-        "pk": "dc_user_2bpDn1NpQ93rnHpSohqyzm",
-        "fields": {
-            "user_id": "264857503974555649",
-            "username": "qwizi",
-            "created_at": "2024-03-02T15:00:55.458Z",
-            "updated_at": "2024-03-02T15:00:55.458Z"
-        }
-    },
-    {
-        "model": "players.discorduser",
         "pk": "dc_user_3YTMW0GVZiSF7FKgXtmN8V",
         "fields": {
             "user_id": "493797036869681153",
@@ -173,19 +163,6 @@
             "avatar": "https://avatars.steamstatic.com/ba990251449ede49012821154442db31f1d891b2_full.jpg",
             "created_at": "2024-03-02T19:37:10.329Z",
             "updated_at": "2024-03-02T19:37:10.329Z"
-        }
-    },
-    {
-        "model": "players.steamuser",
-        "pk": "steam_user_3kEHw3GMKyHLwHlkP7oVeK",
-        "fields": {
-            "username": "็็็็็็็็็็Qwizi",
-            "steamid64": "76561198190469450",
-            "steamid32": "STEAM_1:0:115101861",
-            "profile_url": "https://steamcommunity.com/id/34534645645/",
-            "avatar": "https://avatars.steamstatic.com/d95f7e69a5cfb9c09acf1ecb6a2106239297f668_full.jpg",
-            "created_at": "2024-03-02T19:47:43.830Z",
-            "updated_at": "2024-03-02T19:47:43.830Z"
         }
     },
     {

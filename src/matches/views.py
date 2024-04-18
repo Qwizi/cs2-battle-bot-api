@@ -40,7 +40,7 @@ class MatchViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         request=CreateMatchSerializer,
-        responses={200: MatchSerializer, 400: OpenApiResponse(response=ValidationError, description='Validation error'),}
+        responses={200: MatchSerializer}
 
     )
     def create(self, request, *args, **kwargs):

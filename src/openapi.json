@@ -768,18 +768,6 @@
                             }
                         },
                         "description": ""
-                    },
-                    "400": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "additionalProperties": {},
-                                    "description": "Unspecified response body"
-                                }
-                            }
-                        },
-                        "description": "Validation error"
                     }
                 }
             }
@@ -1395,7 +1383,8 @@
                                 "$ref": "#/components/schemas/Player"
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "security": [
                     {
@@ -1474,7 +1463,8 @@
                                 "$ref": "#/components/schemas/Player"
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "security": [
                     {
@@ -3037,40 +3027,6 @@
                 "type": "string",
                 "description": "* `BO1` - Bo1\n* `BO3` - Bo3\n* `BO5` - Bo5"
             },
-            "Nested": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "user_id": {
-                        "type": "string",
-                        "maxLength": 255
-                    },
-                    "username": {
-                        "type": "string",
-                        "maxLength": 255
-                    },
-                    "created_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true
-                    },
-                    "updated_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true
-                    }
-                },
-                "required": [
-                    "created_at",
-                    "id",
-                    "updated_at",
-                    "user_id",
-                    "username"
-                ]
-            },
             "PaginatedDiscordUserList": {
                 "type": "object",
                 "required": [
@@ -3569,20 +3525,10 @@
                         "readOnly": true
                     },
                     "discord_user": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/Nested"
-                            }
-                        ],
-                        "readOnly": true
+                        "type": "string"
                     },
                     "steam_user": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/Nested"
-                            }
-                        ],
-                        "readOnly": true
+                        "type": "string"
                     }
                 }
             },
@@ -3720,20 +3666,10 @@
                         "readOnly": true
                     },
                     "discord_user": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/Nested"
-                            }
-                        ],
-                        "readOnly": true
+                        "type": "string"
                     },
                     "steam_user": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/Nested"
-                            }
-                        ],
-                        "readOnly": true
+                        "type": "string"
                     }
                 },
                 "required": [
