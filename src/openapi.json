@@ -2720,6 +2720,15 @@
                         },
                         "readOnly": true
                     },
+                    "winner_team": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Team"
+                            }
+                        ],
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "map_bans": {
                         "type": "array",
                         "items": {
@@ -2748,7 +2757,8 @@
                                 "$ref": "#/components/schemas/Server"
                             }
                         ],
-                        "readOnly": true
+                        "readOnly": true,
+                        "nullable": true
                     },
                     "guild": {
                         "allOf": [
@@ -2803,10 +2813,6 @@
                         "format": "date-time",
                         "readOnly": true
                     },
-                    "winner_team": {
-                        "type": "string",
-                        "nullable": true
-                    },
                     "author": {
                         "type": "string",
                         "nullable": true
@@ -2824,7 +2830,8 @@
                     "server",
                     "team1",
                     "team2",
-                    "updated_at"
+                    "updated_at",
+                    "winner_team"
                 ]
             },
             "MatchBanMap": {
@@ -3405,6 +3412,15 @@
                         },
                         "readOnly": true
                     },
+                    "winner_team": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Team"
+                            }
+                        ],
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "map_bans": {
                         "type": "array",
                         "items": {
@@ -3433,7 +3449,8 @@
                                 "$ref": "#/components/schemas/Server"
                             }
                         ],
-                        "readOnly": true
+                        "readOnly": true,
+                        "nullable": true
                     },
                     "guild": {
                         "allOf": [
@@ -3487,10 +3504,6 @@
                         "type": "string",
                         "format": "date-time",
                         "readOnly": true
-                    },
-                    "winner_team": {
-                        "type": "string",
-                        "nullable": true
                     },
                     "author": {
                         "type": "string",

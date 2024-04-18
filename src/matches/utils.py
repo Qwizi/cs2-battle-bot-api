@@ -176,7 +176,7 @@ def create_match(request: Request) -> Response:
         guild=guild
     )
     new_match_serializer = MatchSerializer(new_match)
-    return Response(new_match_serializer.data, status=200)
+    return Response(new_match_serializer.data, status=201)
 
 
 def load_match(pk: int) -> Response:

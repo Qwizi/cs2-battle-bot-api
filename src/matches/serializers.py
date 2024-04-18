@@ -63,7 +63,7 @@ class MatchSerializer(serializers.ModelSerializer):
     team1 = TeamSerializer(read_only=True)
     team2 = TeamSerializer(read_only=True)
     maps = MapSerializer(many=True, read_only=True)
-
+    winner_team = TeamSerializer(read_only=True, allow_null=True)
     map_bans = MapBanSerializer(many=True, read_only=True)
     map_picks = MatchMapSelectedSerializer(many=True, read_only=True)
     connect_command = serializers.CharField(
@@ -73,13 +73,12 @@ class MatchSerializer(serializers.ModelSerializer):
         read_only=True, source="get_load_match_command"
     )
 
-    server = ServerSerializer(read_only=True)
+    server = ServerSerializer(read_only=True, required=False, allow_null=True)
     guild = GuildSerializer(read_only=True)
 
     class Meta:
         model = Match
         fields = "__all__"
-        deph = 1
 
 
 class CreateMatchSerializer(serializers.Serializer):
