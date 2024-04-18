@@ -1,4 +1,5 @@
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FileUploadParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -39,7 +40,8 @@ class MatchViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         request=CreateMatchSerializer,
-        responses={200: MatchSerializer}
+        responses={200: MatchSerializer, 400: OpenApiResponse(response=ValidationError, description='Validation error'),}
+
     )
     def create(self, request, *args, **kwargs):
         return create_match(request)

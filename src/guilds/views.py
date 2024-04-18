@@ -10,6 +10,7 @@ from guilds.utils import create_guild, add_guild_member
 class GuildViewSet(viewsets.ModelViewSet):
     queryset = Guild.objects.all().order_by("created_at")
     serializer_class = GuildSerializer
+    lookup_field = "guild_id"
 
     @extend_schema(
         request=CreateGuildSerializer,

@@ -66,10 +66,13 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
         #'accounts.auth.BearerTokenAuthentication',
     ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+    ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.QueryParameterVersioning",
-    "DEFAULT_VERSION": "2.0",
-    "ALLOWED_VERSIONS": ["2.0"],
     "PAGE_SIZE": 15,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_FILTER_BACKENDS': [

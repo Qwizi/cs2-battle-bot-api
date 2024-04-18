@@ -58,7 +58,7 @@ def test_get_guilds_list(client_with_api_key, guild_data):
 @pytest.mark.django_db
 def test_get_guild(client_with_api_key, guild_data):
     guild = Guild.objects.create_guild(**guild_data)
-    response = client_with_api_key.get(f"{API_ENDPOINT}{guild.id}/")
+    response = client_with_api_key.get(f"{API_ENDPOINT}{guild.guild_id}/")
     assert response.status_code == status.HTTP_200_OK
     assert response.data["name"] == guild_data["name"]
     assert response.data["owner"] is not None
@@ -78,6 +78,6 @@ def test_create_guild(client_with_api_key, guild_data):
 @pytest.mark.django_db
 def test_delete_guild(client_with_api_key, guild_data):
     guild = Guild.objects.create_guild(**guild_data)
-    response = client_with_api_key.delete(f"{API_ENDPOINT}{guild.id}/")
+    response = client_with_api_key.delete(f"{API_ENDPOINT}{guild.guild_id}/")
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert Guild.objects.count() == 0
