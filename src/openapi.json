@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "cs2-battle-bot-api",
-        "version": "0.0.8"
+        "version": "0.0.9"
     },
     "paths": {
         "/api/discord-users/": {
@@ -3505,6 +3505,12 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "discord_user": {
+                        "$ref": "#/components/schemas/DiscordUser"
+                    },
+                    "steam_user": {
+                        "$ref": "#/components/schemas/SteamUser"
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -3514,12 +3520,6 @@
                         "type": "string",
                         "format": "date-time",
                         "readOnly": true
-                    },
-                    "discord_user": {
-                        "type": "string"
-                    },
-                    "steam_user": {
-                        "type": "string"
                     }
                 }
             },
@@ -3619,6 +3619,9 @@
                         },
                         "readOnly": true
                     },
+                    "leader": {
+                        "$ref": "#/components/schemas/Player"
+                    },
                     "name": {
                         "type": "string",
                         "maxLength": 255
@@ -3632,10 +3635,6 @@
                         "type": "string",
                         "format": "date-time",
                         "readOnly": true
-                    },
-                    "leader": {
-                        "type": "string",
-                        "nullable": true
                     }
                 }
             },
@@ -3646,6 +3645,12 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "discord_user": {
+                        "$ref": "#/components/schemas/DiscordUser"
+                    },
+                    "steam_user": {
+                        "$ref": "#/components/schemas/SteamUser"
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -3655,12 +3660,6 @@
                         "type": "string",
                         "format": "date-time",
                         "readOnly": true
-                    },
-                    "discord_user": {
-                        "type": "string"
-                    },
-                    "steam_user": {
-                        "type": "string"
                     }
                 },
                 "required": [
@@ -3789,6 +3788,9 @@
                         },
                         "readOnly": true
                     },
+                    "leader": {
+                        "$ref": "#/components/schemas/Player"
+                    },
                     "name": {
                         "type": "string",
                         "maxLength": 255
@@ -3802,15 +3804,12 @@
                         "type": "string",
                         "format": "date-time",
                         "readOnly": true
-                    },
-                    "leader": {
-                        "type": "string",
-                        "nullable": true
                     }
                 },
                 "required": [
                     "created_at",
                     "id",
+                    "leader",
                     "name",
                     "players",
                     "updated_at"
