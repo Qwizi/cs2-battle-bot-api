@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "cs2-battle-bot-api",
-        "version": "0.0.12"
+        "version": "0.0.13"
     },
     "paths": {
         "/api/discord-users/": {
