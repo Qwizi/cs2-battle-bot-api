@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "cs2-battle-bot-api",
-        "version": "0.0.9"
+        "version": "0.0.10"
     },
     "paths": {
         "/api/discord-users/": {
@@ -969,7 +969,7 @@
         },
         "/api/matches/{id}/bans/": {
             "get": {
-                "operationId": "matches_bans_retrieve",
+                "operationId": "matches_bans_list",
                 "parameters": [
                     {
                         "in": "path",
@@ -979,6 +979,15 @@
                         },
                         "description": "A unique integer value identifying this match.",
                         "required": true
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
                     }
                 ],
                 "tags": [
@@ -994,7 +1003,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/MapBan"
+                                    "$ref": "#/components/schemas/PaginatedMapBanList"
                                 }
                             }
                         },
@@ -1060,7 +1069,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/MatchPlayerJoin"
+                                "$ref": "#/components/schemas/InteractionUser"
                             }
                         }
                     },
@@ -1178,7 +1187,7 @@
         },
         "/api/matches/{id}/picks/": {
             "get": {
-                "operationId": "matches_picks_retrieve",
+                "operationId": "matches_picks_list",
                 "parameters": [
                     {
                         "in": "path",
@@ -1188,6 +1197,15 @@
                         },
                         "description": "A unique integer value identifying this match.",
                         "required": true
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
                     }
                 ],
                 "tags": [
@@ -1203,7 +1221,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/MatchMapSelected"
+                                    "$ref": "#/components/schemas/PaginatedMatchMapSelectedList"
                                 }
                             }
                         },
@@ -1278,10 +1296,11 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/Match"
+                                "$ref": "#/components/schemas/InteractionUser"
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "security": [
                     {
@@ -2603,6 +2622,17 @@
                     "updated_at"
                 ]
             },
+            "InteractionUser": {
+                "type": "object",
+                "properties": {
+                    "user_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "user_id"
+                ]
+            },
             "Map": {
                 "type": "object",
                 "properties": {
@@ -2837,7 +2867,7 @@
             "MatchBanMap": {
                 "type": "object",
                 "properties": {
-                    "interaction_user_id": {
+                    "user_id": {
                         "type": "string"
                     },
                     "map_tag": {
@@ -2845,8 +2875,8 @@
                     }
                 },
                 "required": [
-                    "interaction_user_id",
-                    "map_tag"
+                    "map_tag",
+                    "user_id"
                 ]
             },
             "MatchBanMapResult": {
@@ -2971,7 +3001,7 @@
             "MatchPickMap": {
                 "type": "object",
                 "properties": {
-                    "interaction_user_id": {
+                    "user_id": {
                         "type": "string"
                     },
                     "map_tag": {
@@ -2979,8 +3009,8 @@
                     }
                 },
                 "required": [
-                    "interaction_user_id",
-                    "map_tag"
+                    "map_tag",
+                    "user_id"
                 ]
             },
             "MatchPickMapResult": {
@@ -3007,17 +3037,6 @@
                     "maps_left",
                     "next_pick_team_leader",
                     "picked_map"
-                ]
-            },
-            "MatchPlayerJoin": {
-                "type": "object",
-                "properties": {
-                    "discord_user_id": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "discord_user_id"
                 ]
             },
             "MatchTypeEnum": {
@@ -3091,6 +3110,37 @@
                     }
                 }
             },
+            "PaginatedMapBanList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MapBan"
+                        }
+                    }
+                }
+            },
             "PaginatedMapList": {
                 "type": "object",
                 "required": [
@@ -3149,6 +3199,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/Match"
+                        }
+                    }
+                }
+            },
+            "PaginatedMatchMapSelectedList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MatchMapSelected"
                         }
                     }
                 }
