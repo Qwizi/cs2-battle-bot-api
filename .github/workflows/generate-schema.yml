@@ -51,3 +51,15 @@ jobs:
                     token: ${{ secrets.RELEASE_GIT_TOKEN }}
                     repository: Qwizi/cs2-battle-bot-api-client
                     event-type: generate-client
+            -   name: Release New Version
+                uses: softprops/action-gh-release@v1
+                with:
+                    name: v${{ env.RELEASE_VERSION }}
+                    tag_name: v${{ env.RELEASE_VERSION }}
+                    token: ${{ secrets.RELEASE_GIT_TOKEN }}
+            -   name: Discord notification
+                env:
+                    DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+                uses: Ilshidur/action-discord@master
+                with:
+                    args: '{{ EVENT_PAYLOAD.repository.full_name }}  successfully released new version.'
