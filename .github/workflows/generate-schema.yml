@@ -23,17 +23,15 @@ jobs:
                     python-version: 3.11
             -   name: "Install the project"
                 run: "poetry install"
+            -   name: Install jq
+                run: |
+                    sudo apt-get update
+                    sudo apt-get install -y jq
             -   name: Generate Schema
                 run: |
                     cd src
                     poetry run python manage.py spectacular --file openapi.json --validate --format openapi-json
                     echo "Schema generated"
-            -   name: Install jq
-                run: |
-                    sudo apt-get update
-                    sudo apt-get install -y jq
-            -   name: Get version from openapi.json
-                run: |
                     VERSION=$(jq -r .info.version openapi.json)
                     echo "RELEASE_VERSION=$VERSION" >> $GITHUB_ENV
             -   name: Commit and push changes
