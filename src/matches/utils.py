@@ -28,7 +28,7 @@ from matches.serializers import (
     MatchEventSeriesStartSerializer,
     MatchPickMapSerializer,
     MatchPlayerJoin,
-    MatchSerializer, MatchBanMapResultSerializer, MatchPickMapResultSerializer,
+    MatchSerializer, MatchBanMapResultSerializer, MatchPickMapResultSerializer, InteractionUserSerializer,
 )
 from players.models import DiscordUser, Player, Team
 from players.utils import create_default_teams, divide_players
@@ -419,7 +419,16 @@ def shuffle_teams(pk: int) -> Response:
     --------
         Response: Response object.
     """
+    serializer = InteractionUserSerializer()
+    serializer.is_valid(raise_exception=True)
     match: Match = get_object_or_404(Match, pk=pk)
+    interaction_user_id = serializer.validated_data.get("interaction_user_id")
+    author = get_object_or_404(Player, discord_user__user_id=interaction_user_id)
+    if author.pk != match.author.pk:
+        return Response(
+            {"message": "You are not allowed to shuffle the teams of this match"},
+            status=403,
+        )
     players = match.team1.players.all() | match.team2.players.all()
     players = list(players)
     team1, team2 = divide_players(players)
@@ -429,8 +438,6 @@ def shuffle_teams(pk: int) -> Response:
     match.team2.leader = team2[0]
     match.save()
     match_serializer = MatchSerializer(match)
-    if not match_serializer:
-        return Response({"message": "Error shuffling teams"}, status=400)
     return Response(match_serializer.data, status=200)
 
 
@@ -535,7 +542,7 @@ def join_match(request: Request, pk: int) -> Response:
     if not match_player_join_serializer.is_valid():
         return Response(match_player_join_serializer.errors, status=400)
 
-    discord_user_id = match_player_join_serializer.validated_data.get("discord_user_id")
+    discord_user_id = match_player_join_serializer.validated_data.get("interaction_user_id")
     player = get_object_or_404(Player, discord_user__user_id=discord_user_id)
     if match.team1.players.filter(pk=player.id).exists():
         return Response(

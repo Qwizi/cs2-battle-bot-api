@@ -20,7 +20,7 @@ from matches.serializers import (
     MatchConfigSerializer,
     MatchMapSelectedSerializer,
     MatchSerializer, CreateMatchSerializer, MatchBanMapSerializer, MatchPickMapSerializer, MatchPlayerJoin,
-    MatchBanMapResultSerializer, MatchPickMapResultSerializer,
+    MatchBanMapResultSerializer, MatchPickMapResultSerializer, InteractionUserSerializer,
 )
 from matches.utils import (
     ban_map,
@@ -74,12 +74,16 @@ class MatchViewSet(viewsets.ModelViewSet):
     def recreate(self, request, pk):
         return recreate_match(request, pk)
 
+    @extend_schema(
+        request=InteractionUserSerializer,
+        responses={200: MatchSerializer}
+    )
     @action(detail=True, methods=["POST"])
     def shuffle(self, request, pk):
         return shuffle_teams(request, pk)
 
     @extend_schema(
-        responses={200: MapBanSerializer}
+        responses={200: MapBanSerializer(many=True)}
     )
     @action(detail=True, methods=["GET"])
     def bans(self, request, pk):
@@ -95,7 +99,7 @@ class MatchViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @extend_schema(
-        responses={200: MatchMapSelectedSerializer}
+        responses={200: MatchMapSelectedSerializer(many=True)}
     )
     @action(detail=True, methods=["GET"])
     def picks(self, request, pk):
@@ -111,7 +115,7 @@ class MatchViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @extend_schema(
-        request=MatchPlayerJoin,
+        request=InteractionUserSerializer,
         responses={200: MatchSerializer}
     )
     @action(detail=True, methods=["POST"])
@@ -121,7 +125,8 @@ class MatchViewSet(viewsets.ModelViewSet):
     @extend_schema(
         responses={200: MatchConfigSerializer}
     )
-    @action(detail=True, methods=["GET"], permission_classes=[IsAuthor], authentication_classes=[BearerTokenAuthentication])
+    @action(detail=True, methods=["GET"], permission_classes=[IsAuthor],
+            authentication_classes=[BearerTokenAuthentication])
     def config(self, request, pk):
         match = self.get_object()
         serializer = MatchConfigSerializer(data=match.get_config())
