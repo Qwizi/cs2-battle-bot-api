@@ -1,6 +1,11 @@
 ## CS2 Battle Bot API
 Backend server for cs2 battle discord bot
 
+[![Generate Client](https://github.com/Qwizi/cs2-battle-bot-api/actions/workflows/generate-schema.yml/badge.svg)](https://github.com/Qwizi/cs2-battle-bot-api/actions/workflows/generate-schema.yml)
+[![Publish Backend Docker image](https://github.com/Qwizi/cs2-battle-bot-api/actions/workflows/docker.yml/badge.svg)](https://github.com/Qwizi/cs2-battle-bot-api/actions/workflows/docker.yml)
+[![Tests](https://github.com/Qwizi/cs2-battle-bot-api/actions/workflows/test.yml/badge.svg)](https://github.com/Qwizi/cs2-battle-bot-api/actions/workflows/test.yml)
+
+
 ## Installation
 
 ### Docker

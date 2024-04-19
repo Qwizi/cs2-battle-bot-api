@@ -31,10 +31,10 @@ jobs:
             -   name: Commit and push changes
                 run: |
                     git config --global user.email "github@actions.com"
-                    git config --global user.name "GitHub Actions"
+                    git config --global user.name "GitHub Actions "
                     git add .
                     if [[ -n "$(git diff --cached)" ]]; then
-                        git commit -m "Generate OpenAPI schema"
+                        git commit -m "Generate OpenAPI schema [skip ci]"
                         git push
                     else
                         echo "No changes to commit"
