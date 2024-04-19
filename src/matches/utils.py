@@ -8,6 +8,7 @@ from rcon import Client, EmptyResponse, SessionTimeout, WrongPassword
 import redis
 from rest_framework.authtoken.models import Token
 
+from guilds.models import Guild
 from matches.models import (
     Map,
     Match,
@@ -27,7 +28,7 @@ from matches.serializers import (
     MatchEventSeriesStartSerializer,
     MatchPickMapSerializer,
     MatchPlayerJoin,
-    MatchSerializer, MatchBanMapResultSerializer, MatchPickMapResultSerializer,
+    MatchSerializer, MatchBanMapResultSerializer, MatchPickMapResultSerializer, InteractionUserSerializer,
 )
 from players.models import DiscordUser, Player, Team
 from players.utils import create_default_teams, divide_players
@@ -77,7 +78,7 @@ def check_server_is_available_for_match(server: Server) -> bool:
     --------
         bool: True if the server is available, False otherwise.
     """
-    if Match.objects.filter(server=server, status=MatchStatus.LIVE).exists() or Match.objects.filter(server=server,                                                                             status=MatchStatus.STARTED).exists():
+    if Match.objects.filter(server=server, status=MatchStatus.LIVE).exists() or Match.objects.filter(server=server, status=MatchStatus.STARTED).exists():
         return False
     return True
 
@@ -95,18 +96,18 @@ def create_match(request: Request) -> Response:
         Response: Response object.
     """
     serializer = CreateMatchSerializer(data=request.data)
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=400)
+    serializer.is_valid(raise_exception=True)
     discord_users_ids = serializer.validated_data.get("discord_users_ids")
     match_type = serializer.validated_data.get("match_type", "BO1")
     clinch_series = serializer.validated_data.get("clinch_series", False)
     map_sides = serializer.validated_data.get(
         "map_sides", ["knife", "team1_ct", "team2_ct"]
     )
-    cvars = serializer.validated_data.get("cvars", None)
     discord_users_ids = list(set(discord_users_ids))
     author_id = serializer.validated_data.get("author_id")
     server_id = serializer.validated_data.get("server_id")
+    guild_id = serializer.validated_data.get("guild_id")
+    cvars = serializer.validated_data.get("cvars")
     if len(discord_users_ids) < 2:
         return Response({"message": "At least 2 players are required"}, status=400)
     server = None
@@ -116,21 +117,24 @@ def create_match(request: Request) -> Response:
             return Response(
                 {"message": "Server is not online. Cannot create match"}, status=400
             )
-    if not check_server_is_available_for_match(server):
-        return Response(
-            {"message": "Server is not available for a match. Another match is already running"},
-            status=400,
-        )
+        if not Match.objects.check_server_is_available_for_match(server):
+            return Response(
+                {"message": "Server is not available for a match. Another match is already running"},
+                status=400,
+            )
     discord_users_list: list[DiscordUser] = []
-    try:
-        for discord_user_id in discord_users_ids:
+    discord_users_not_found: list[str] = []
+    for discord_user_id in discord_users_ids:
+        try:
             discord_user = DiscordUser.objects.get(user_id=discord_user_id)
             discord_users_list.append(discord_user)
-    except DiscordUser.DoesNotExist as e:
+        except DiscordUser.DoesNotExist as e:
+            discord_users_not_found.append(discord_user_id)
+    if discord_users_not_found:
         return Response(
             {
-                "message": e.args,
-                "user_id": discord_user_id,
+                "message": f"Discord users not found",
+                "users": discord_users_not_found,
             },
             status=404,
         )
@@ -139,7 +143,7 @@ def create_match(request: Request) -> Response:
     except DiscordUser.DoesNotExist as e:
         return Response(
             {
-                "message": e.args,
+                "message": "Author not found",
                 "user_id": author_id,
             },
             status=404,
@@ -159,45 +163,18 @@ def create_match(request: Request) -> Response:
         players_list.append(player)
 
     team1, team2 = create_default_teams("Team 1", "Team 2", players_list)
-    maps = Map.objects.all()
-
-    num_maps = 1 if match_type == MatchType.BO1 else 3
-    player_per_team = len(players_list) / 2
-    players_per_team_rounded = math.ceil(player_per_team)
-
-    new_match = Match.objects.create(
-        author=author,
-        type=match_type,
+    guild = get_object_or_404(Guild, pk=guild_id)
+    new_match = Match.objects.create_match(
         team1=team1,
         team2=team2,
-        players_per_team=players_per_team_rounded,
-        num_maps=num_maps,
-        maplist=[map.tag for map in maps],
-        map_sides=map_sides,
-        cvars=cvars,
+        author=author,
+        type=match_type,
         clinch_series=clinch_series,
+        map_sides=map_sides,
+        server=server,
+        cvars=cvars,
+        guild=guild
     )
-    user = UserModel.objects.get(player__discord_user__pk=author.pk)
-    token = Token.objects.get(user=user)
-    webhook_url = f"{settings.HOST_URL}/api/matches/{new_match.id}/webhook/"
-    header_key = "Bearer"
-    token_key = token.key
-    if not cvars:
-        cvars = {
-            "matchzy_remote_log_url": webhook_url,
-            "matchzy_remote_log_header_key": header_key,
-            "matchzy_remote_log_header_value": token_key,
-        }
-    else:
-        cvars["matchzy_remote_log_url"] = webhook_url
-        cvars["matchzy_remote_log_header_key"] = header_key
-        cvars["matchzy_remote_log_header_value"] = token_key
-    new_match.cvars = cvars
-
-    new_match.maps.set(maps)
-    if server:
-        new_match.server = server
-    new_match.save()
     new_match_serializer = MatchSerializer(new_match)
     return Response(new_match_serializer.data, status=201)
 
@@ -294,7 +271,7 @@ def ban_map(request: Request, pk: int) -> Response:
             },
             status=400,
         )
-    if map_bans_count == 1:
+    if match.maps.count() == 1:
         return Response(
             {"message": "Only one map left. You can't ban more maps"}, status=400
         )
@@ -317,14 +294,8 @@ def ban_map(request: Request, pk: int) -> Response:
             },
             status=400,
         )
-    match_map_ban = MapBan.objects.create(team=user_team, map=map)
-    match.map_bans.add(match_map_ban)
-    match.maps.remove(map)
-    maplist = match.maplist
-    maplist.remove(map.tag)
-    match.maplist = maplist
-    match.save()
-    map_ban_result_serializer = MatchBanMapResultSerializer(
+    match.ban_map(user_team, map)
+    ban_result_serializer = MatchBanMapResultSerializer(
         data={
             "banned_map": map.tag,
             "next_ban_team_leader": match.team1.leader.discord_user.username
@@ -334,7 +305,8 @@ def ban_map(request: Request, pk: int) -> Response:
             "map_bans_count": match.map_bans.count(),
         }
     )
-    return Response(map_ban_result_serializer.data, status=200)
+    ban_result_serializer.is_valid(raise_exception=True)
+    return Response(ban_result_serializer.data, status=200)
 
 
 def pick_map(request: Request, pk: int) -> Response["MatchPickMapResultSerializer"]:
@@ -355,6 +327,9 @@ def pick_map(request: Request, pk: int) -> Response["MatchPickMapResultSerialize
     match_map_pick_serializer = MatchPickMapSerializer(data=request.data)
     match_map_pick_serializer.is_valid(raise_exception=True)
     interaction_user_id = match_map_pick_serializer.validated_data.get("interaction_user_id")
+
+    if match.type == MatchType.BO1:
+        return Response({"message": "Cannot pick a map in a BO1 match"}, status=400)
 
     try:
         player = Player.objects.get(discord_user__user_id=interaction_user_id)
@@ -387,6 +362,14 @@ def pick_map(request: Request, pk: int) -> Response["MatchPickMapResultSerialize
         )
     last_pick = match.map_picks.all().order_by("-created_at").first()
     map_picks_count = match.map_picks.count()
+    map_bans_count = match.map_bans.count()
+
+    if map_bans_count < 2:
+        return Response(
+            {"message": "Both teams have to ban 1 map before picking a map"}, status=400
+        )
+
+
     if map_picks_count > 0 and last_pick.team == user_team:
         return Response(
             {
@@ -409,27 +392,18 @@ def pick_map(request: Request, pk: int) -> Response["MatchPickMapResultSerialize
             status=400,
         )
 
-    map_selected = MapPick.objects.create(team=user_team, map=map)
-    match.map_picks.add(map_selected)
-    map_index = match.maplist.index(map.tag)
-    match.maplist.pop(map_index)
-    map_picks_count = match.map_picks.count()
-    if map_picks_count == 1:
-        match.maplist.insert(0, map.tag)
-    else:
-        match.maplist.insert(1, map.tag)
-
-    match.save()
+    match.pick_map(user_team, map)
     map_pick_result_serializer = MatchPickMapResultSerializer(
-        {
+        data={
             "picked_map": map.tag,
             "next_pick_team_leader": match.team1.leader.discord_user.username
             if match.team2 == user_team
             else match.team2.leader.discord_user.username,
             "maps_left": match.maplist,
-            "map_picks_count": map_picks_count,
+            "map_picks_count": match.map_picks.count(),
         }
     )
+    map_pick_result_serializer.is_valid(raise_exception=True)
     return Response(map_pick_result_serializer.data, status=200)
 
 
@@ -445,7 +419,16 @@ def shuffle_teams(pk: int) -> Response:
     --------
         Response: Response object.
     """
+    serializer = InteractionUserSerializer()
+    serializer.is_valid(raise_exception=True)
     match: Match = get_object_or_404(Match, pk=pk)
+    interaction_user_id = serializer.validated_data.get("interaction_user_id")
+    author = get_object_or_404(Player, discord_user__user_id=interaction_user_id)
+    if author.pk != match.author.pk:
+        return Response(
+            {"message": "You are not allowed to shuffle the teams of this match"},
+            status=403,
+        )
     players = match.team1.players.all() | match.team2.players.all()
     players = list(players)
     team1, team2 = divide_players(players)
@@ -455,8 +438,6 @@ def shuffle_teams(pk: int) -> Response:
     match.team2.leader = team2[0]
     match.save()
     match_serializer = MatchSerializer(match)
-    if not match_serializer:
-        return Response({"message": "Error shuffling teams"}, status=400)
     return Response(match_serializer.data, status=200)
 
 
@@ -561,7 +542,7 @@ def join_match(request: Request, pk: int) -> Response:
     if not match_player_join_serializer.is_valid():
         return Response(match_player_join_serializer.errors, status=400)
 
-    discord_user_id = match_player_join_serializer.validated_data.get("discord_user_id")
+    discord_user_id = match_player_join_serializer.validated_data.get("interaction_user_id")
     player = get_object_or_404(Player, discord_user__user_id=discord_user_id)
     if match.team1.players.filter(pk=player.id).exists():
         return Response(

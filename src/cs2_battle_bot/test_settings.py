@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
-import toml
 from rest_framework.authentication import TokenAuthentication
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -64,17 +63,15 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
-        #'accounts.auth.BearerTokenAuthentication',
-    ],
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-    ],
-    'DEFAULT_PARSER_CLASSES': [
-        'rest_framework.parsers.JSONParser',
+        # 'accounts.auth.BearerTokenAuthentication',
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.QueryParameterVersioning",
+    "DEFAULT_VERSION": "2.0",
+    "ALLOWED_VERSIONS": ["2.0"],
     "PAGE_SIZE": 15,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json',
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
 
@@ -118,14 +115,10 @@ WSGI_APPLICATION = "cs2_battle_bot.wsgi.application"
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
-    "default": {
-        "ENGINE": os.environ.get("DB_ENGINE", "django.db.backends.sqlite3"),
-        "NAME": os.environ.get("DB_NAME", BASE_DIR / "db.sqlite3"),
-        "USER": os.environ.get("DB_USER", "user"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", "password"),
-        "HOST": os.environ.get("DB_HOST", "localhost"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
-    },
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / "db.sqlite3",
+    }
 }
 
 CACHES = {
@@ -193,19 +186,10 @@ API_KEY = os.environ.get("API_KEY", "key")
 
 AUTH_USER_MODEL = "accounts.User"  # new
 
-
-def get_spectacular_settings():
-    # Load the pyproject.toml file
-    pyproject_data = toml.load(Path(__file__).resolve().parent.parent.parent / "pyproject.toml")
-
-    # Get the name, version, and description
-    name = pyproject_data.get("tool", {}).get("poetry", {}).get("name", "")
-    version = pyproject_data.get("tool", {}).get("poetry", {}).get("version", "")
-    description = pyproject_data.get("tool", {}).get("poetry", {}).get("description", "")
-
-    # Assign them to the SPECTACULAR_SETTINGS dictionary
-    return {"TITLE": name, "VERSION": version, "DESCRIPTION": description}
-
-
-# Use the function
-SPECTACULAR_SETTINGS = get_spectacular_settings()
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Basic': {
+            'type': 'basic'
+        }
+    }
+}

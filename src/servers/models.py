@@ -1,5 +1,6 @@
 from django.db import models
 from prefix_id import PrefixIDField
+from rcon import Client, EmptyResponse, SessionTimeout, WrongPassword
 from steam import game_servers as gs
 
 
@@ -10,7 +11,6 @@ class Server(models.Model):
     port = models.PositiveIntegerField()
     password = models.CharField(max_length=100, null=True, blank=True)
     rcon_password = models.CharField(max_length=100, null=True, blank=True)
-    max_players = models.PositiveIntegerField()
     is_public = models.BooleanField(default=False)
     guild = models.ForeignKey(
         "guilds.Guild", on_delete=models.CASCADE, related_name="servers", null=True, blank=True
@@ -30,6 +30,18 @@ class Server(models.Model):
 
     def get_join_link(self):
         return f"steam://connect/{self.ip}:{self.port}/{self.password}"
+
+    def send_rcon_command(self, command, *args):
+        try:
+            with Client(
+                    self.host,
+                    int(self.port),
+                    passwd=self.rcon_password,
+            ) as client:
+                return client.run(command, *args)
+        except (EmptyResponse, SessionTimeout, WrongPassword) as e:
+            print(f"Error sending RCON command: {e}")
+            return None
 
     def __str__(self):
         return f"<{self.ip}:{self.port} - {self.name}>"
