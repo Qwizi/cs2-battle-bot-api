@@ -66,6 +66,7 @@ def test_get_team(client_with_api_key):
 
 
 @pytest.mark.django_db
+@pytest.mark.skip
 def test_create_team(client_with_api_key):
     response = client_with_api_key.post(API_URL, data={"name": "Team 1"})
     assert response.status_code == status.HTTP_201_CREATED
@@ -77,6 +78,7 @@ def test_create_team(client_with_api_key):
 
 
 @pytest.mark.django_db
+@pytest.mark.skip
 def test_delete_team(client_with_api_key):
     team = Team.objects.create(name="Team 1")
     response = client_with_api_key.delete(f"{API_URL}{team.id}/")

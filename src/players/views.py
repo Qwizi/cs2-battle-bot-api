@@ -18,6 +18,6 @@ class SteamUserViewSet(viewsets.ModelViewSet):
     serializer_class = SteamUserSerializer
 
 
-class TeamViewSet(viewsets.ModelViewSet):
+class TeamViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Team.objects.all().order_by("created_at")
     serializer_class = TeamSerializer

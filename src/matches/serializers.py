@@ -156,7 +156,7 @@ class MatchEventMapResultSerializer(MatchEventSerializer):
 
 
 class InteractionUserSerializer(serializers.Serializer):
-	user_id = serializers.CharField(required=True)
+	interaction_user_id = serializers.CharField(required=True)
 
 
 class MatchBanMapSerializer(InteractionUserSerializer):
