@@ -18,13 +18,12 @@ jobs:
                 uses: "actions/setup-python@v5"
                 with:
                     python-version: 3.11
-                    cache: "poetry"
             -   name: "Install the project"
                 run: "poetry install"
             -   name: Generate Schema
                 run: |
                     cd src
-                    python manage.py spectacular --file openapi.json --validate --format openapi-json
+                    poetry run python manage.py spectacular --file openapi.json --validate --format openapi-json
                     echo "Schema generated"
             -   name: Commit and push changes
                 run: |
