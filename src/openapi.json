@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "cs2-battle-bot-api",
-        "version": "0.0.11"
+        "version": "0.0.12"
     },
     "paths": {
         "/api/discord-users/": {
@@ -2241,39 +2241,6 @@
                         "description": ""
                     }
                 }
-            },
-            "post": {
-                "operationId": "teams_create",
-                "tags": [
-                    "teams"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/Team"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "tokenAuth": []
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Team"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
             }
         },
         "/api/teams/{id}/": {
@@ -2308,120 +2275,6 @@
                             }
                         },
                         "description": ""
-                    }
-                }
-            },
-            "put": {
-                "operationId": "teams_update",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "description": "A unique value identifying this team.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "teams"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/Team"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "tokenAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Team"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "patch": {
-                "operationId": "teams_partial_update",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "description": "A unique value identifying this team.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "teams"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedTeam"
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "tokenAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Team"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "delete": {
-                "operationId": "teams_destroy",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "description": "A unique value identifying this team.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "teams"
-                ],
-                "security": [
-                    {
-                        "tokenAuth": []
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No response body"
                     }
                 }
             }
@@ -2625,12 +2478,12 @@
             "InteractionUser": {
                 "type": "object",
                 "properties": {
-                    "user_id": {
+                    "interaction_user_id": {
                         "type": "string"
                     }
                 },
                 "required": [
-                    "user_id"
+                    "interaction_user_id"
                 ]
             },
             "Map": {
@@ -2867,7 +2720,7 @@
             "MatchBanMap": {
                 "type": "object",
                 "properties": {
-                    "user_id": {
+                    "interaction_user_id": {
                         "type": "string"
                     },
                     "map_tag": {
@@ -2875,8 +2728,8 @@
                     }
                 },
                 "required": [
-                    "map_tag",
-                    "user_id"
+                    "interaction_user_id",
+                    "map_tag"
                 ]
             },
             "MatchBanMapResult": {
@@ -3001,7 +2854,7 @@
             "MatchPickMap": {
                 "type": "object",
                 "properties": {
-                    "user_id": {
+                    "interaction_user_id": {
                         "type": "string"
                     },
                     "map_tag": {
@@ -3009,8 +2862,8 @@
                     }
                 },
                 "required": [
-                    "map_tag",
-                    "user_id"
+                    "interaction_user_id",
+                    "map_tag"
                 ]
             },
             "MatchPickMapResult": {
@@ -3685,39 +3538,6 @@
                     "avatar": {
                         "type": "string",
                         "nullable": true,
-                        "maxLength": 255
-                    },
-                    "created_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true
-                    },
-                    "updated_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true
-                    }
-                }
-            },
-            "PatchedTeam": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "players": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/Player"
-                        },
-                        "readOnly": true
-                    },
-                    "leader": {
-                        "$ref": "#/components/schemas/Player"
-                    },
-                    "name": {
-                        "type": "string",
                         "maxLength": 255
                     },
                     "created_at": {
