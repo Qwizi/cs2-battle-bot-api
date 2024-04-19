@@ -1,0 +1,35 @@
+name: Generate Client
+
+on:
+    push:
+
+jobs:
+    generate-schema:
+        runs-on: ubuntu-latest
+
+        steps:
+            -   name: Checkout repository
+                uses: actions/checkout@v4
+                with:
+                    token: ${{ secrets.RELEASE_GIT_TOKEN }}
+            -   name: "Install Poetry"
+                run: "pipx install poetry"
+            -   name: Set up Python ${{matrix.python-version}}
+                uses: "actions/setup-python@v5"
+                with:
+                    python-version: 3.11
+                    cache: poetry
+            -   name: "Install the project"
+                run: "poetry install"
+            -   name: Generate Schema
+                run: |
+                    cd src
+                    python manage.py spectacular --file openapi.json --validate --format openapi-json
+                    echo "Schema generated"
+            -   name: Commit and push changes
+                run: |
+                    git config --global user.email "github@actions.com"
+                    git config --global user.name "GitHub Actions"
+                    git add .
+                    git commit -m "Generated openapi.json"
+                    git push
