@@ -80,7 +80,8 @@ def check_server_is_available_for_match(server: Server) -> bool:
     --------
         bool: True if the server is available, False otherwise.
     """
-    if Match.objects.filter(server=server, status=MatchStatus.LIVE).exists() or Match.objects.filter(server=server, status=MatchStatus.STARTED).exists():
+    if Match.objects.filter(server=server, status=MatchStatus.LIVE).exists() or Match.objects.filter(server=server,
+                                                                                                     status=MatchStatus.STARTED).exists():
         return False
     return True
 
@@ -157,10 +158,10 @@ def create_match(request: Request) -> Response:
         if player.steam_user is None:
             return Response(
                 {
-                        "message": f"Discord user {discord_user.username} has no connected player",
-                        "user_id": discord_user.user_id,
+                    "message": f"Discord user {discord_user.username} has no connected player",
+                    "user_id": discord_user.user_id,
                 },
-                    status=404,
+                status=404,
             )
         players_list.append(player)
 
@@ -298,15 +299,12 @@ def ban_map(request: Request, pk: int) -> Response:
         )
     match.ban_map(user_team, map)
     ban_result_serializer = MatchBanMapResultSerializer(
+        context={"banned_map": map, "next_ban_team": match.team1 if match.team2 == user_team else match.team2,},
         data={
-            "banned_map": MapSerializer(map).data,
-            "next_ban_team": TeamSerializer(match.team1).data
-            if match.team2 == user_team
-            else TeamSerializer(match.team2).data,
             "maps_left": match.maplist,
             "map_bans_count": match.map_bans.count(),
         }
-    )
+        )
     ban_result_serializer.is_valid(raise_exception=True)
     return Response(ban_result_serializer.data, status=200)
 
@@ -371,7 +369,6 @@ def pick_map(request: Request, pk: int) -> Response["MatchPickMapResultSerialize
             {"message": "Both teams have to ban 1 map before picking a map"}, status=400
         )
 
-
     if map_picks_count > 0 and last_pick.team == user_team:
         return Response(
             {
@@ -396,11 +393,8 @@ def pick_map(request: Request, pk: int) -> Response["MatchPickMapResultSerialize
 
     match.pick_map(user_team, map)
     map_pick_result_serializer = MatchPickMapResultSerializer(
+        context={"picked_map": map, "next_pick_team": match.team1 if match.team2 == user_team else match.team2,},
         data={
-            "picked_map": MapSerializer(map).data,
-            "next_pick_team": TeamSerializer(match.team1).data
-            if match.team2 == user_team
-            else TeamSerializer(match.team2).data,
             "maps_left": match.maplist,
             "map_picks_count": match.map_picks.count(),
         }
