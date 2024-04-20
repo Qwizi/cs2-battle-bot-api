@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "cs2-battle-bot-api",
-        "version": "0.0.14"
+        "version": "0.0.15"
     },
     "paths": {
         "/api/discord-users/": {
@@ -2619,6 +2619,15 @@
                         },
                         "readOnly": true
                     },
+                    "last_map_ban": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MapBan"
+                            }
+                        ],
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "map_picks": {
                         "type": "array",
                         "items": {
@@ -2626,12 +2635,29 @@
                         },
                         "readOnly": true
                     },
+                    "last_map_pick": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MatchMapSelected"
+                            }
+                        ],
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "connect_command": {
                         "type": "string",
                         "readOnly": true
                     },
                     "load_match_command": {
                         "type": "string",
+                        "readOnly": true
+                    },
+                    "author": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DiscordUser"
+                            }
+                        ],
                         "readOnly": true
                     },
                     "server": {
@@ -2695,17 +2721,16 @@
                         "type": "string",
                         "format": "date-time",
                         "readOnly": true
-                    },
-                    "author": {
-                        "type": "string",
-                        "nullable": true
                     }
                 },
                 "required": [
+                    "author",
                     "connect_command",
                     "created_at",
                     "guild",
                     "id",
+                    "last_map_ban",
+                    "last_map_pick",
                     "load_match_command",
                     "map_bans",
                     "map_picks",
@@ -2736,10 +2761,10 @@
                 "type": "object",
                 "properties": {
                     "banned_map": {
-                        "type": "string"
+                        "$ref": "#/components/schemas/Map"
                     },
-                    "next_ban_team_leader": {
-                        "type": "string"
+                    "next_ban_team": {
+                        "$ref": "#/components/schemas/Team"
                     },
                     "maps_left": {
                         "type": "array",
@@ -2755,7 +2780,7 @@
                     "banned_map",
                     "map_bans_count",
                     "maps_left",
-                    "next_ban_team_leader"
+                    "next_ban_team"
                 ]
             },
             "MatchConfig": {
@@ -2870,10 +2895,10 @@
                 "type": "object",
                 "properties": {
                     "picked_map": {
-                        "type": "string"
+                        "$ref": "#/components/schemas/Map"
                     },
-                    "next_pick_team_leader": {
-                        "type": "string"
+                    "next_pick_team": {
+                        "$ref": "#/components/schemas/Team"
                     },
                     "maps_left": {
                         "type": "array",
@@ -2888,7 +2913,7 @@
                 "required": [
                     "map_picks_count",
                     "maps_left",
-                    "next_pick_team_leader",
+                    "next_pick_team",
                     "picked_map"
                 ]
             },
@@ -3362,6 +3387,15 @@
                         },
                         "readOnly": true
                     },
+                    "last_map_ban": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MapBan"
+                            }
+                        ],
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "map_picks": {
                         "type": "array",
                         "items": {
@@ -3369,12 +3403,29 @@
                         },
                         "readOnly": true
                     },
+                    "last_map_pick": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MatchMapSelected"
+                            }
+                        ],
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "connect_command": {
                         "type": "string",
                         "readOnly": true
                     },
                     "load_match_command": {
                         "type": "string",
+                        "readOnly": true
+                    },
+                    "author": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DiscordUser"
+                            }
+                        ],
                         "readOnly": true
                     },
                     "server": {
@@ -3438,10 +3489,6 @@
                         "type": "string",
                         "format": "date-time",
                         "readOnly": true
-                    },
-                    "author": {
-                        "type": "string",
-                        "nullable": true
                     }
                 }
             },
