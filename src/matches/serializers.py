@@ -189,18 +189,29 @@ class MatchPickMapSerializer(MatchBanMapSerializer):
 
 
 class MatchBanMapResultSerializer(serializers.Serializer):
-    banned_map = MapSerializer(required=True)
-    next_ban_team = TeamSerializer(required=True)
-    maps_left = serializers.ListField(child=serializers.CharField(required=True))
-    map_bans_count = serializers.IntegerField(required=True)
+    banned_map = serializers.SerializerMethodField(method_name="get_banned_map")
+    next_ban_team = serializers.SerializerMethodField(method_name="get_next_ban_team")
+    maps_left = serializers.ListField(child=serializers.CharField())
+    map_bans_count = serializers.IntegerField()
+
+    def get_banned_map(self, obj) -> MapSerializer:
+        return MapSerializer(self.context["banned_map"]).data
+
+    def get_next_ban_team(self, obj) -> TeamSerializer:
+        return TeamSerializer(self.context["next_ban_team"]).data
 
 
 class MatchPickMapResultSerializer(serializers.Serializer):
-    picked_map = MapSerializer(required=True)
-    next_pick_team = TeamSerializer(required=True)
-    maps_left = serializers.ListField(child=serializers.CharField(required=True))
-    map_picks_count = serializers.IntegerField(required=True)
+    picked_map = serializers.SerializerMethodField(method_name="get_picked_map")
+    next_pick_team = serializers.SerializerMethodField(method_name="get_next_pick_team")
+    maps_left = serializers.ListField(child=serializers.CharField())
+    map_picks_count = serializers.IntegerField()
 
+    def get_picked_map(self, obj) -> MapSerializer:
+        return MapSerializer(self.context["picked_map"]).data
+
+    def get_next_pick_team(self, obj) -> TeamSerializer:
+        return TeamSerializer(self.context["next_pick_team"]).data
 
 class MatchPlayerJoin(InteractionUserSerializer):
     pass
