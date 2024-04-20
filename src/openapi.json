@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "cs2-battle-bot-api",
-        "version": "0.0.15"
+        "version": "0.0.16"
     },
     "paths": {
         "/api/discord-users/": {
@@ -2761,10 +2761,20 @@
                 "type": "object",
                 "properties": {
                     "banned_map": {
-                        "$ref": "#/components/schemas/Map"
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Map"
+                            }
+                        ],
+                        "readOnly": true
                     },
                     "next_ban_team": {
-                        "$ref": "#/components/schemas/Team"
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Team"
+                            }
+                        ],
+                        "readOnly": true
                     },
                     "maps_left": {
                         "type": "array",
@@ -2895,10 +2905,20 @@
                 "type": "object",
                 "properties": {
                     "picked_map": {
-                        "$ref": "#/components/schemas/Map"
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Map"
+                            }
+                        ],
+                        "readOnly": true
                     },
                     "next_pick_team": {
-                        "$ref": "#/components/schemas/Team"
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Team"
+                            }
+                        ],
+                        "readOnly": true
                     },
                     "maps_left": {
                         "type": "array",
