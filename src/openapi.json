@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "cs2-battle-bot-api",
-        "version": "0.0.16"
+        "version": "0.0.17"
     },
     "paths": {
         "/api/discord-users/": {
@@ -346,11 +346,10 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/Guild"
+                                "$ref": "#/components/schemas/UpdateGuild"
                             }
                         }
-                    },
-                    "required": true
+                    }
                 },
                 "security": [
                     {
@@ -827,7 +826,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/Match"
+                                "$ref": "#/components/schemas/MatchUpdate"
                             }
                         }
                     }
@@ -2946,6 +2945,48 @@
                 "type": "string",
                 "description": "* `BO1` - Bo1\n* `BO3` - Bo3\n* `BO5` - Bo5"
             },
+            "MatchUpdate": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "$ref": "#/components/schemas/StatusEnum"
+                    },
+                    "type": {
+                        "$ref": "#/components/schemas/TypeEnum"
+                    },
+                    "team1_id": {
+                        "type": "string"
+                    },
+                    "team2_id": {
+                        "type": "string"
+                    },
+                    "map_sides": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MapSidesEnum"
+                        }
+                    },
+                    "clinch_series": {
+                        "type": "boolean"
+                    },
+                    "cvars": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "message_id": {
+                        "type": "string"
+                    },
+                    "author_id": {
+                        "type": "string"
+                    },
+                    "server_id": {
+                        "type": "string"
+                    },
+                    "guild_id": {
+                        "type": "string"
+                    }
+                }
+            },
             "PaginatedDiscordUserList": {
                 "type": "object",
                 "required": [
@@ -3804,6 +3845,23 @@
                 ],
                 "type": "string",
                 "description": "* `BO1` - Bo1\n* `BO3` - Bo3\n* `BO5` - Bo5"
+            },
+            "UpdateGuild": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "lobby_channel": {
+                        "type": "string"
+                    },
+                    "team1_channel": {
+                        "type": "string"
+                    },
+                    "team2_channel": {
+                        "type": "string"
+                    }
+                }
             }
         },
         "securitySchemes": {
