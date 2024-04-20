@@ -10,8 +10,7 @@ API_ENDPOINT = "/api/guilds/"
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("methods", ["get", "post", "put", "patch", "delete"])
-def test_guilds_unauthorized(methods, api_client, guild_data):
-    guild = Guild.objects.create_guild(**guild_data)
+def test_guilds_unauthorized(methods, api_client, guild):
 
     if methods == "get":
         response = api_client.get(API_ENDPOINT)
@@ -42,28 +41,26 @@ def test_get_guilds_empty_list(client_with_api_key):
 
 
 @pytest.mark.django_db
-def test_get_guilds_list(client_with_api_key, guild_data):
-    guild = Guild.objects.create_guild(**guild_data)
+def test_get_guilds_list(client_with_api_key, guild):
     response = client_with_api_key.get(API_ENDPOINT)
     assert response.status_code == status.HTTP_200_OK
     assert response.data["count"] == 1
-    assert response.data["results"][0]["name"] == guild_data["name"]
+    assert response.data["results"][0]["name"] == guild.name
     assert response.data["results"][0]["owner"] is not None
-    assert response.data["results"][0]["guild_id"] == guild_data["guild_id"]
-    assert len(response.data["results"][0]["members"]) == len(guild_data["members"]) + 1
+    assert response.data["results"][0]["guild_id"] == guild.guild_id
+    assert len(response.data["results"][0]["members"]) == guild.members.count()
     assert response.data["next"] is None
     assert response.data["previous"] is None
 
 
 @pytest.mark.django_db
-def test_get_guild(client_with_api_key, guild_data):
-    guild = Guild.objects.create_guild(**guild_data)
+def test_get_guild(client_with_api_key, guild):
     response = client_with_api_key.get(f"{API_ENDPOINT}{guild.guild_id}/")
     assert response.status_code == status.HTTP_200_OK
-    assert response.data["name"] == guild_data["name"]
+    assert response.data["name"] == guild.name
     assert response.data["owner"] is not None
-    assert response.data["guild_id"] == guild_data["guild_id"]
-    assert len(response.data["members"]) == len(guild_data["members"]) + 1
+    assert response.data["guild_id"] == guild.guild_id
+    assert len(response.data["members"]) == guild.members.count()
 
 
 @pytest.mark.django_db
@@ -76,8 +73,28 @@ def test_create_guild(client_with_api_key, guild_data):
     assert len(response.data["members"]) == len(guild_data["members"]) + 1
 
 @pytest.mark.django_db
-def test_delete_guild(client_with_api_key, guild_data):
-    guild = Guild.objects.create_guild(**guild_data)
+def test_delete_guild(client_with_api_key, guild):
     response = client_with_api_key.delete(f"{API_ENDPOINT}{guild.guild_id}/")
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert Guild.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_update_guild(client_with_api_key, guild):
+    name = "new name"
+    lobby_channel = "new_lobby_channel"
+    team1_channel = "new_team1_channel"
+    team2_channel = "new_team2_channel"
+    data = {
+        "name": name,
+        "lobby_channel": lobby_channel,
+        "team1_channel": team1_channel,
+        "team2_channel": team2_channel
+    }
+    response = client_with_api_key.put(f"{API_ENDPOINT}{guild.guild_id}/", data=data)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["name"] == name
+    assert response.data["lobby_channel"] == lobby_channel
+    assert response.data["team1_channel"] == team1_channel
+    assert response.data["team2_channel"] == team2_channel
+    assert response.data["owner"] is not None

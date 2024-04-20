@@ -20,3 +20,10 @@ class CreateGuildSerializer(serializers.Serializer):
     owner_id = serializers.CharField()
     owner_username = serializers.CharField()
     members = CreateGuildMemberSerializer(many=True)
+
+
+class UpdateGuildSerializer(serializers.Serializer):
+    name = serializers.CharField(required=False)
+    lobby_channel = serializers.CharField(required=False)
+    team1_channel = serializers.CharField(required=False)
+    team2_channel = serializers.CharField(required=False)
