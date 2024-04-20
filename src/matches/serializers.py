@@ -3,8 +3,8 @@ import re
 from rest_framework import serializers
 
 from guilds.serializers import GuildSerializer
-from matches.models import Map, MapBan, MapPick, Match, MatchType
-from players.serializers import TeamSerializer
+from matches.models import Map, MapBan, MapPick, Match, MatchType, MatchStatus
+from players.serializers import TeamSerializer, DiscordUserSerializer
 from servers.serializers import ServerSerializer
 
 
@@ -74,13 +74,32 @@ class MatchSerializer(serializers.ModelSerializer):
     load_match_command = serializers.CharField(
         read_only=True, source="get_load_match_command"
     )
-
+    author = DiscordUserSerializer(read_only=True)
     server = ServerSerializer(read_only=True, required=False, allow_null=True)
     guild = GuildSerializer(read_only=True)
 
     class Meta:
         model = Match
         fields = "__all__"
+
+
+class MatchUpdateSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=MatchStatus.choices, required=False)
+    type = serializers.ChoiceField(choices=MatchType.choices, required=False)
+    team1_id = serializers.CharField(required=False)
+    team2_id = serializers.CharField(required=False)
+    map_sides = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=["team1_ct", "team2_ct", "team1_t", "team2_t", "knife"], required=False
+        ),
+        required=False,
+    )
+    clinch_series = serializers.BooleanField(required=False)
+    cvars = serializers.DictField(required=False)
+    message_id = serializers.CharField(required=False)
+    author_id = serializers.CharField(required=False)
+    server_id = serializers.CharField(required=False)
+    guild_id = serializers.CharField(required=False)
 
 
 class CreateMatchSerializer(serializers.Serializer):

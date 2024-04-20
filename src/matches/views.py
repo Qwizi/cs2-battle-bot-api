@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FileUploadParser
@@ -6,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.auth import BearerTokenAuthentication
+from guilds.models import Guild
 from matches.models import (
     Map,
     Match,
@@ -20,7 +22,7 @@ from matches.serializers import (
     MatchConfigSerializer,
     MatchMapSelectedSerializer,
     MatchSerializer, CreateMatchSerializer, MatchBanMapSerializer, MatchPickMapSerializer, MatchPlayerJoin,
-    MatchBanMapResultSerializer, MatchPickMapResultSerializer, InteractionUserSerializer,
+    MatchBanMapResultSerializer, MatchPickMapResultSerializer, InteractionUserSerializer, MatchUpdateSerializer,
 )
 from matches.utils import (
     ban_map,
@@ -32,6 +34,8 @@ from matches.utils import (
     recreate_match,
     shuffle_teams,
 )
+from players.models import Team, DiscordUser
+from servers.models import Server
 
 
 class MatchViewSet(viewsets.ModelViewSet):
@@ -45,6 +49,38 @@ class MatchViewSet(viewsets.ModelViewSet):
     )
     def create(self, request, *args, **kwargs):
         return create_match(request)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = MatchUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        if data.get("status"):
+            instance.status = data["status"]
+        if data.get("type"):
+            instance.type = data["type"]
+        if data.get("team1_id"):
+            instance.team1 = get_object_or_404(Team, id=data["team1_id"])
+        if data.get("team2_id"):
+            instance.team2 = get_object_or_404(Team, id=data["team2_id"])
+        if data.get("map_sides"):
+            instance.map_sides = data["map_sides"]
+        if data.get("clinch_series"):
+            instance.clinch_series = data["clinch_series"]
+        if data.get("cvars"):
+            instance.cvars = data["cvars"]
+        if data.get("message_id"):
+            instance.message_id = data["message_id"]
+        if data.get("author_id"):
+            instance.author = get_object_or_404(DiscordUser, id=data["author_id"])
+        if data.get("server_id"):
+            instance.server = get_object_or_404(Server, id=data["server_id"])
+        if data.get("guild_id"):
+            instance.guild = get_object_or_404(Guild, id=data["guild_id"])
+        instance.save()
+        return Response(self.get_serializer(instance).data, status=200)
+
+
 
     @action(detail=True, methods=["POST"])
     def load(self, request, pk=None):
