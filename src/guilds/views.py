@@ -21,6 +21,10 @@ class GuildViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         return create_guild(request)
 
+    @extend_schema(
+        request=UpdateGuildSerializer,
+        responses={200: GuildSerializer}
+    )
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = UpdateGuildSerializer(data=request.data)

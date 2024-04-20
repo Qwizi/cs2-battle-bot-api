@@ -50,6 +50,10 @@ class MatchViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         return create_match(request)
 
+    @extend_schema(
+        request=MatchUpdateSerializer,
+        responses={200: MatchSerializer}
+    )
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = MatchUpdateSerializer(data=request.data)
