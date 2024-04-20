@@ -29,8 +29,10 @@ from matches.serializers import (
     MatchPickMapSerializer,
     MatchPlayerJoin,
     MatchSerializer, MatchBanMapResultSerializer, MatchPickMapResultSerializer, InteractionUserSerializer,
+    MapSerializer,
 )
 from players.models import DiscordUser, Player, Team
+from players.serializers import TeamSerializer
 from players.utils import create_default_teams, divide_players
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -297,10 +299,10 @@ def ban_map(request: Request, pk: int) -> Response:
     match.ban_map(user_team, map)
     ban_result_serializer = MatchBanMapResultSerializer(
         data={
-            "banned_map": map.tag,
-            "next_ban_team_leader": match.team1.leader.discord_user.username
+            "banned_map": MapSerializer(map).data,
+            "next_ban_team": TeamSerializer(match.team1).data
             if match.team2 == user_team
-            else match.team2.leader.discord_user.username,
+            else TeamSerializer(match.team2).data,
             "maps_left": match.maplist,
             "map_bans_count": match.map_bans.count(),
         }
@@ -395,10 +397,10 @@ def pick_map(request: Request, pk: int) -> Response["MatchPickMapResultSerialize
     match.pick_map(user_team, map)
     map_pick_result_serializer = MatchPickMapResultSerializer(
         data={
-            "picked_map": map.tag,
-            "next_pick_team_leader": match.team1.leader.discord_user.username
+            "picked_map": MapSerializer(map).data,
+            "next_pick_team": TeamSerializer(match.team1).data
             if match.team2 == user_team
-            else match.team2.leader.discord_user.username,
+            else TeamSerializer(match.team2).data,
             "maps_left": match.maplist,
             "map_picks_count": match.map_picks.count(),
         }

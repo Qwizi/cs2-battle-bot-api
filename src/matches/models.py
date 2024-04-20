@@ -121,6 +121,8 @@ class Match(models.Model):
     map_picks = models.ManyToManyField(
         MapPick, related_name="matches_map_picks"
     )
+    last_map_ban = models.ForeignKey(MapBan, on_delete=models.CASCADE, related_name="matches_last_map_ban", null=True)
+    last_map_pick = models.ForeignKey(MapPick, on_delete=models.CASCADE, related_name="matches_last_map_pick", null=True)
     num_maps = models.PositiveIntegerField(default=1)
     maplist = models.JSONField(null=True)
     map_sides = models.JSONField(null=True)
@@ -203,15 +205,17 @@ class Match(models.Model):
         return [map.tag for map in self.maps.all()]
 
     def ban_map(self, team, map):
-        self.map_bans.add(MapBan.objects.create(team=team, map=map))
+        map_ban = MapBan.objects.create(team=team, map=map)
+        self.map_bans.add(map_ban)
         self.maps.remove(map)
         self.maplist.remove(map.tag)
+        self.last_map_ban = map_ban
         self.save()
         return self
 
     def pick_map(self, team, map):
-        map_selected = MapPick.objects.create(team=team, map=map)
-        self.map_picks.add(map_selected)
+        map_pick = MapPick.objects.create(team=team, map=map)
+        self.map_picks.add(map_pick)
         map_index = self.maplist.index(map.tag)
         self.maplist.pop(map_index)
         map_picks_count = self.map_picks.count()
@@ -219,6 +223,6 @@ class Match(models.Model):
             self.maplist.insert(0, map.tag)
         else:
             self.maplist.insert(1, map.tag)
-
+        self.last_map_pick = map_pick
         self.save()
         return self

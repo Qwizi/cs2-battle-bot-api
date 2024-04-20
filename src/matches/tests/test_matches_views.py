@@ -222,8 +222,9 @@ def test_match_ban_map(client_with_api_key, match, match_type):
     }
     response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/ban/", ban_data)
     assert response.status_code == status.HTTP_200_OK
-    assert response.data["banned_map"] == "de_mirage"
-    assert response.data["next_ban_team_leader"] == "virdis__"
+    assert response.data["banned_map"]["tag"] == ban_data["map_tag"]
+    assert response.data["next_ban_team"]["name"] == match.team2.name
+    assert response.data["next_ban_team"]["leader"]["discord_user"]["user_id"] == match.team2.leader.discord_user.user_id
     assert response.data["map_bans_count"] == 1
     updated_match = Match.objects.get(id=match.pk)
     assert len(response.data["maps_left"]) == len(updated_match.maplist)
@@ -260,8 +261,9 @@ def test_match_pick_map(client_with_api_key, match, match_type):
         assert response.data["message"] == "Cannot pick a map in a BO1 match"
         return
     assert response.status_code == status.HTTP_200_OK
-    assert response.data["picked_map"] == "de_mirage"
-    assert response.data["next_pick_team_leader"] == "virdis__"
+    assert response.data["picked_map"]["tag"] == pick_data["map_tag"]
+    assert response.data["next_pick_team"]["name"] == match.team2.name
+    assert response.data["next_pick_team"]["leader"]["discord_user"]["user_id"] == match.team2.leader.discord_user.user_id
     assert response.data["map_picks_count"] == 1
     assert "de_nuke" not in response.data["maps_left"]
     assert "de_overpass" not in response.data["maps_left"]
@@ -313,44 +315,50 @@ def test_match_b01_map_veto_flow(client_with_api_key, match):
     # First team 1 ban
     t1_ban_1_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/ban/", team1_ban_data[0])
     assert t1_ban_1_response.status_code == status.HTTP_200_OK
-    assert t1_ban_1_response.data["banned_map"] == team1_ban_data[0]["map_tag"]
+    assert t1_ban_1_response.data["banned_map"]["tag"] == team1_ban_data[0]["map_tag"]
     assert len(t1_ban_1_response.data["maps_left"]) == 6
-    assert t1_ban_1_response.data["next_ban_team_leader"] == team2_leader.discord_user.username
+    assert t1_ban_1_response.data["next_ban_team"]["name"] == match.team2.name
+    assert t1_ban_1_response.data["next_ban_team"]["leader"]["discord_user"]["user_id"] == team2_leader.discord_user.user_id
 
     # First team 2 ban
     t2_ban_1_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/ban/", team2_ban_data[0])
     assert t2_ban_1_response.status_code == status.HTTP_200_OK
-    assert t2_ban_1_response.data["banned_map"] == team2_ban_data[0]["map_tag"]
+    assert t2_ban_1_response.data["banned_map"]["tag"] == team2_ban_data[0]["map_tag"]
     assert len(t2_ban_1_response.data["maps_left"]) == 5
-    assert t2_ban_1_response.data["next_ban_team_leader"] == team1_leader.discord_user.username
+    assert t2_ban_1_response.data["next_ban_team"]["name"] == match.team1.name
+    assert t2_ban_1_response.data["next_ban_team"]["leader"]["discord_user"]["user_id"] == team1_leader.discord_user.user_id
 
     # Second team 1 ban
     t1_ban_2_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/ban/", team1_ban_data[1])
     assert t1_ban_2_response.status_code == status.HTTP_200_OK
-    assert t1_ban_2_response.data["banned_map"] == team1_ban_data[1]["map_tag"]
+    assert t1_ban_2_response.data["banned_map"]["tag"] == team1_ban_data[1]["map_tag"]
     assert len(t1_ban_2_response.data["maps_left"]) == 4
-    assert t1_ban_2_response.data["next_ban_team_leader"] == team2_leader.discord_user.username
+    assert t1_ban_2_response.data["next_ban_team"]["name"] == match.team2.name
+    assert t1_ban_2_response.data["next_ban_team"]["leader"]["discord_user"]["user_id"] == team2_leader.discord_user.user_id
 
     # Second team 2 ban
     t2_ban_2_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/ban/", team2_ban_data[1])
     assert t2_ban_2_response.status_code == status.HTTP_200_OK
-    assert t2_ban_2_response.data["banned_map"] == team2_ban_data[1]["map_tag"]
+    assert t2_ban_2_response.data["banned_map"]["tag"] == team2_ban_data[1]["map_tag"]
     assert len(t2_ban_2_response.data["maps_left"]) == 3
-    assert t2_ban_2_response.data["next_ban_team_leader"] == team1_leader.discord_user.username
+    assert t2_ban_2_response.data["next_ban_team"]["name"] == match.team1.name
+    assert t2_ban_2_response.data["next_ban_team"]["leader"]["discord_user"]["user_id"] == team1_leader.discord_user.user_id
 
     # Third team 1 ban
     t1_ban_3_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/ban/", team1_ban_data[2])
     assert t1_ban_3_response.status_code == status.HTTP_200_OK
-    assert t1_ban_3_response.data["banned_map"] == team1_ban_data[2]["map_tag"]
+    assert t1_ban_3_response.data["banned_map"]["tag"]  == team1_ban_data[2]["map_tag"]
     assert len(t1_ban_3_response.data["maps_left"]) == 2
-    assert t1_ban_3_response.data["next_ban_team_leader"] == team2_leader.discord_user.username
+    assert t1_ban_3_response.data["next_ban_team"]["name"] == match.team2.name
+    assert t1_ban_3_response.data["next_ban_team"]["leader"]["discord_user"]["user_id"] == team2_leader.discord_user.user_id
 
     # Third team 2 ban
     t2_ban_3_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/ban/", team2_ban_data[2])
     assert t2_ban_3_response.status_code == status.HTTP_200_OK
-    assert t2_ban_3_response.data["banned_map"] == team2_ban_data[2]["map_tag"]
+    assert t2_ban_3_response.data["banned_map"]["tag"]  == team2_ban_data[2]["map_tag"]
     assert len(t2_ban_3_response.data["maps_left"]) == 1
-    assert t2_ban_3_response.data["next_ban_team_leader"] == team1_leader.discord_user.username
+    assert t2_ban_3_response.data["next_ban_team"]["name"] == match.team1.name
+    assert t2_ban_3_response.data["next_ban_team"]["leader"]["discord_user"]["user_id"] == team1_leader.discord_user.user_id
 
     assert t2_ban_3_response.data["maps_left"][0] == end_map_should_left
 
@@ -502,46 +510,52 @@ def test_match_b03_map_veto_flow(client_with_api_key, match):
     # First team 1 ban
     t1_ban_1_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/ban/", team1_ban_data[0])
     assert t1_ban_1_response.status_code == status.HTTP_200_OK
-    assert t1_ban_1_response.data["banned_map"] == team1_ban_data[0]["map_tag"]
+    assert t1_ban_1_response.data["banned_map"]["tag"] == team1_ban_data[0]["map_tag"]
     assert len(t1_ban_1_response.data["maps_left"]) == 6
-    assert t1_ban_1_response.data["next_ban_team_leader"] == team2_leader.discord_user.username
+    assert t1_ban_1_response.data["next_ban_team"]["name"] == match.team2.name
+    assert t1_ban_1_response.data["next_ban_team"]["leader"]["discord_user"]["user_id"] == team2_leader.discord_user.user_id
 
     # First team 2 ban
     t2_ban_1_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/ban/", team2_ban_data[0])
     assert t2_ban_1_response.status_code == status.HTTP_200_OK
-    assert t2_ban_1_response.data["banned_map"] == team2_ban_data[0]["map_tag"]
+    assert t2_ban_1_response.data["banned_map"]["tag"] == team2_ban_data[0]["map_tag"]
     assert len(t2_ban_1_response.data["maps_left"]) == 5
-    assert t2_ban_1_response.data["next_ban_team_leader"] == team1_leader.discord_user.username
+    assert t2_ban_1_response.data["next_ban_team"]["name"] == match.team1.name
+    assert t2_ban_1_response.data["next_ban_team"]["leader"]["discord_user"]["user_id"] == team1_leader.discord_user.user_id
 
     # First team 1 pick
     t1_pick_1_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/pick/", team1_pick_data[0])
     assert t1_pick_1_response.status_code == status.HTTP_200_OK
-    assert t1_pick_1_response.data["picked_map"] == team1_pick_data[0]["map_tag"]
+    assert t1_pick_1_response.data["picked_map"]["tag"] == team1_pick_data[0]["map_tag"]
     assert len(t1_pick_1_response.data["maps_left"]) == 5
     assert t1_pick_1_response.data["map_picks_count"] == 1
-    assert t1_pick_1_response.data["next_pick_team_leader"] == team2_leader.discord_user.username
+    assert t1_pick_1_response.data["next_pick_team"]["name"] == match.team2.name
+    assert t1_pick_1_response.data["next_pick_team"]["leader"]["discord_user"]["user_id"] == team2_leader.discord_user.user_id
 
     # First team 2 pick
     t2_pick_1_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/pick/", team2_pick_data[0])
     assert t2_pick_1_response.status_code == status.HTTP_200_OK
-    assert t2_pick_1_response.data["picked_map"] == team2_pick_data[0]["map_tag"]
+    assert t2_pick_1_response.data["picked_map"]["tag"] == team2_pick_data[0]["map_tag"]
     assert len(t2_pick_1_response.data["maps_left"]) == 5
     assert t2_pick_1_response.data["map_picks_count"] == 2
-    assert t2_pick_1_response.data["next_pick_team_leader"] == team1_leader.discord_user.username
+    assert t2_pick_1_response.data["next_pick_team"]["name"] == match.team1.name
+    assert t2_pick_1_response.data["next_pick_team"]["leader"]["discord_user"]["user_id"] == team1_leader.discord_user.user_id
 
     # Second team 1 ban
     t1_ban_2_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/ban/", team1_ban_data[1])
     assert t1_ban_2_response.status_code == status.HTTP_200_OK
-    assert t1_ban_2_response.data["banned_map"] == team1_ban_data[1]["map_tag"]
+    assert t1_ban_2_response.data["banned_map"]["tag"] == team1_ban_data[1]["map_tag"]
     assert len(t1_ban_2_response.data["maps_left"]) == 4
-    assert t1_ban_2_response.data["next_ban_team_leader"] == team2_leader.discord_user.username
+    assert t1_ban_2_response.data["next_ban_team"]["name"] == match.team2.name
+    assert t1_ban_2_response.data["next_ban_team"]["leader"]["discord_user"]["user_id"] == team2_leader.discord_user.user_id
 
     # Second team 2 ban
     t2_ban_2_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/ban/", team2_ban_data[1])
     assert t2_ban_2_response.status_code == status.HTTP_200_OK
-    assert t2_ban_2_response.data["banned_map"] == team2_ban_data[1]["map_tag"]
+    assert t2_ban_2_response.data["banned_map"]["tag"] == team2_ban_data[1]["map_tag"]
     assert len(t2_ban_2_response.data["maps_left"]) == 3
-    assert t2_ban_2_response.data["next_ban_team_leader"] == team1_leader.discord_user.username
+    assert t2_ban_2_response.data["next_ban_team"]["name"] == match.team1.name
+    assert t2_ban_2_response.data["next_ban_team"]["leader"]["discord_user"]["user_id"] == team1_leader.discord_user.user_id
 
     assert t2_ban_2_response.data["maps_left"] == end_maps_should_left
 
