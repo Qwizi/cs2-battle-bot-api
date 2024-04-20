@@ -29,8 +29,10 @@ from matches.serializers import (
     MatchPickMapSerializer,
     MatchPlayerJoin,
     MatchSerializer, MatchBanMapResultSerializer, MatchPickMapResultSerializer, InteractionUserSerializer,
+    MapSerializer,
 )
 from players.models import DiscordUser, Player, Team
+from players.serializers import TeamSerializer
 from players.utils import create_default_teams, divide_players
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -297,10 +299,10 @@ def ban_map(request: Request, pk: int) -> Response:
     match.ban_map(user_team, map)
     ban_result_serializer = MatchBanMapResultSerializer(
         data={
-            "banned_map": map.tag,
-            "next_ban_team_leader": match.team1.leader.discord_user.username
+            "banned_map": MapSerializer(map).data,
+            "next_ban_team": TeamSerializer(match.team1).data
             if match.team2 == user_team
-            else match.team2.leader.discord_user.username,
+            else TeamSerializer(match.team2).data,
             "maps_left": match.maplist,
             "map_bans_count": match.map_bans.count(),
         }
@@ -395,10 +397,10 @@ def pick_map(request: Request, pk: int) -> Response["MatchPickMapResultSerialize
     match.pick_map(user_team, map)
     map_pick_result_serializer = MatchPickMapResultSerializer(
         data={
-            "picked_map": map.tag,
-            "next_pick_team_leader": match.team1.leader.discord_user.username
+            "picked_map": MapSerializer(map).data,
+            "next_pick_team": TeamSerializer(match.team1).data
             if match.team2 == user_team
-            else match.team2.leader.discord_user.username,
+            else TeamSerializer(match.team2).data,
             "maps_left": match.maplist,
             "map_picks_count": match.map_picks.count(),
         }
@@ -407,7 +409,7 @@ def pick_map(request: Request, pk: int) -> Response["MatchPickMapResultSerialize
     return Response(map_pick_result_serializer.data, status=200)
 
 
-def shuffle_teams(pk: int) -> Response:
+def shuffle_teams(request, pk: int) -> Response:
     """
     Shuffle the teams of a match.
 
@@ -419,15 +421,15 @@ def shuffle_teams(pk: int) -> Response:
     --------
         Response: Response object.
     """
-    serializer = InteractionUserSerializer()
-    serializer.is_valid(raise_exception=True)
     match: Match = get_object_or_404(Match, pk=pk)
+    serializer = InteractionUserSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
     interaction_user_id = serializer.validated_data.get("interaction_user_id")
-    author = get_object_or_404(Player, discord_user__user_id=interaction_user_id)
+    author = get_object_or_404(DiscordUser, user_id=interaction_user_id)
     if author.pk != match.author.pk:
         return Response(
-            {"message": "You are not allowed to shuffle the teams of this match"},
-            status=403,
+            {"message": "Only the author of the match can shuffle the teams"},
+            status=400,
         )
     players = match.team1.players.all() | match.team2.players.all()
     players = list(players)
@@ -563,7 +565,7 @@ def join_match(request: Request, pk: int) -> Response:
     return Response(match_serializer.data, status=200)
 
 
-def recreate_match(pk: int) -> Response:
+def recreate_match(request, pk: int) -> Response:
     """
     Create a new match with the same teams.
 
@@ -576,12 +578,22 @@ def recreate_match(pk: int) -> Response:
         Response: Response object.
     """
     match: Match = get_object_or_404(Match, pk=pk)
-    new_match = Match.objects.create(
+    serializer = InteractionUserSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    interaction_user_id = serializer.validated_data.get("interaction_user_id")
+    author = get_object_or_404(DiscordUser, user_id=interaction_user_id)
+    if author.pk != match.author.pk:
+        return Response(
+            {"message": "Only the author of the match can recreate the match"},
+            status=400,
+        )
+    new_match = Match.objects.create_match(
         type=match.type,
         team1=match.team1,
         team2=match.team2,
+        author=match.author,
+        guild=match.guild,
+        server=match.server
     )
-    new_match.maps.set(Map.objects.all())
-    new_match.save()
     new_match_serializer = MatchSerializer(new_match)
     return Response(new_match_serializer.data, status=201)
