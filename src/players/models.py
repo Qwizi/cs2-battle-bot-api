@@ -31,7 +31,7 @@ class SteamUser(models.Model):
 class Player(models.Model):
     id = PrefixIDField(primary_key=True, prefix="player")
     discord_user = models.ForeignKey(DiscordUser, on_delete=models.CASCADE)
-    steam_user = models.ForeignKey(SteamUser, on_delete=models.CASCADE)
+    steam_user = models.ForeignKey(SteamUser, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
