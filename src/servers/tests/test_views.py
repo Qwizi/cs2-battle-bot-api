@@ -124,19 +124,6 @@ def test_create_server_with_guild(client_with_api_key, server_data, guild_data):
     assert response.data["guild"] == guild.id
 
 
-@pytest.mark.django_db
-def test_get_servers_list_public_filter(client_with_api_key, server_data, guild_data):
-    server = Server.objects.create(**server_data)
-    guild = Guild.objects.create_guild(**guild_data)
-    server2 = Server.objects.create(ip="127.0.0.1", port=27016, name="Guild Server", password="changeme", rcon_password="test", is_public=False, guild=guild)
-    response = client_with_api_key.get(f"{API_ENDPOINT}?is_public=true")
-    assert response.status_code == 200
-    assert response.data["count"] == 1
-    assert Server.objects.count() == 2
-    assert response.data["results"][0]["is_public"] is True
-
-    # Ensure that the rcon_password is not exposed
-    assert "rcon_password" not in response.data["results"][0]
 
 
 @pytest.mark.django_db
@@ -145,11 +132,12 @@ def test_get_servers_list_with_guild_filter(client_with_api_key, server_data, gu
     guild = Guild.objects.create_guild(**guild_data)
     server2 = Server.objects.create(ip="127.0.0.1", port=27016, name="Guild Server", password="changeme",
                                     rcon_password="test", is_public=False, guild=guild)
-    response = client_with_api_key.get(f"{API_ENDPOINT}?guild={guild.id}")
+    server3 = Server.objects.create(ip="127.0.0.1", port=27016, name="Guild Server", password="changeme",
+                                    rcon_password="test", is_public=False)
+    response = client_with_api_key.get(f"{API_ENDPOINT}?guild_or_public={guild.id}")
     assert response.status_code == 200
-    assert response.data["count"] == 1
-    assert Server.objects.count() == 2
-    assert response.data["results"][0]["guild"] == guild.id
+    assert response.data["count"] == 2
+    assert Server.objects.count() == 3
 
     # Ensure that the rcon_password is not exposed
     assert "rcon_password" not in response.data["results"][0]

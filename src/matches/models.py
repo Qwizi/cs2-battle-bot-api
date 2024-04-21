@@ -6,6 +6,7 @@ from django.db import models
 from django.db.models import Q
 from prefix_id import PrefixIDField
 from rest_framework.authtoken.models import Token
+from rest_framework.reverse import reverse_lazy
 
 from players.models import Team
 
@@ -70,7 +71,7 @@ class MatchManager(models.Manager):
         server = kwargs.pop("server", None)
         num_maps = kwargs.pop("num_maps", 1 if match_type == MatchType.BO1 else 3)
         cvars = kwargs.pop("cvars", None)
-        webhook_url = kwargs.pop("webhook_url", None)
+        request = kwargs.pop("request", None)
         players_list = team1.players.all() | team2.players.all()
         player_per_team = len(players_list) / 2
         players_per_team_rounded = math.ceil(player_per_team)
@@ -88,7 +89,7 @@ class MatchManager(models.Manager):
             cvars=cvars,
         )
         match.maps.set(maps)
-        match.create_webhook_cvars(webhook_url=webhook_url)
+        match.create_webhook_cvars(webhook_url=str(reverse_lazy("match-webhook", args=[match.pk], request=request)))
         match.save()
         return match
 

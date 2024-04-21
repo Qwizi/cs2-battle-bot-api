@@ -95,9 +95,9 @@ class MatchViewSet(viewsets.ModelViewSet):
     def load(self, request, pk=None):
         return load_match(pk, request)
 
-    @action(detail=False, methods=["POST"], permission_classes=[IsAuthenticated])
-    def webhook(self, request):
-        return process_webhook(request)
+    @action(detail=True, methods=["POST"], permission_classes=[IsAuthenticated, IsAuthor], authentication_classes=[BearerTokenAuthentication])
+    def webhook(self, request, pk):
+        return process_webhook(request, pk)
 
     @extend_schema(
         request=MatchBanMapSerializer,

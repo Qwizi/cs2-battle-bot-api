@@ -73,6 +73,8 @@ class MatchSerializer(serializers.ModelSerializer):
     server = ServerSerializer(read_only=True, required=False, allow_null=True)
     guild = GuildSerializer(read_only=True)
     config_url = serializers.SerializerMethodField(method_name="get_config_url")
+    config = serializers.SerializerMethodField(method_name="get_config")
+
     webhook_url = serializers.SerializerMethodField(method_name="get_webhook_url")
     connect_command = serializers.CharField(
         read_only=True, source="get_connect_command"
@@ -83,11 +85,14 @@ class MatchSerializer(serializers.ModelSerializer):
         return reverse_lazy("match-config", args=[obj.id], request=self.context["request"])
 
     def get_webhook_url(self, obj) -> str:
-        return reverse_lazy("match-webhook", request=self.context["request"])
+        return reverse_lazy("match-webhook", args=[obj.id], request=self.context["request"])
 
     def get_load_match_command(self, obj) -> str:
         config_url = self.get_config_url(obj)
         return f'{obj.load_match_command_name} "{config_url}" "{obj.api_key_header}" "{obj.get_author_token()}"'
+
+    def get_config(self, obj) -> dict:
+        return obj.get_config()
 
     class Meta:
         model = Match
@@ -111,6 +116,7 @@ class MatchUpdateSerializer(serializers.Serializer):
     author_id = serializers.CharField(required=False)
     server_id = serializers.CharField(required=False)
     guild_id = serializers.CharField(required=False)
+
 
 
 class CreateMatchSerializer(serializers.Serializer):

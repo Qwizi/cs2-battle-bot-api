@@ -26,7 +26,7 @@ def test_match_model(teams_with_players, default_author, with_server, match_type
         clinch_series=clinch_series,
         map_sides=["knife", "knife", "knife"],
         server=server,
-        webhook_url=str(reverse_lazy("match-webhook", request=request)),
+        request=request
     )
     assert new_match.status == MatchStatus.CREATED
     assert new_match.type == match_type
@@ -58,7 +58,7 @@ def test_match_model(teams_with_players, default_author, with_server, match_type
     assert match_config["clinch_series"] is clinch_series
     assert match_config["players_per_team"] == 5
     assert match_config["cvars"] == new_match.cvars
-    assert match_config["cvars"]["matchzy_remote_log_url"] == reverse_lazy("match-webhook", request=request)
+    assert match_config["cvars"]["matchzy_remote_log_url"] == reverse_lazy("match-webhook", args=[new_match.pk], request=request)
     assert match_config["cvars"]["matchzy_remote_log_header_key"] == new_match.api_key_header
     assert match_config["cvars"]["matchzy_remote_log_header_value"] == new_match.get_author_token()
 
