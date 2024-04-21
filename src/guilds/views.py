@@ -1,12 +1,11 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
-from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from guilds.models import Guild
-from guilds.serializers import GuildSerializer, CreateGuildSerializer, CreateGuildMemberSerializer, \
+from guilds.serializers import GuildSerializer, CreateGuildSerializer, \
     UpdateGuildSerializer
-from guilds.utils import create_guild, add_guild_member
+from guilds.utils import create_guild
 
 
 class GuildViewSet(viewsets.ModelViewSet):
@@ -41,12 +40,3 @@ class GuildViewSet(viewsets.ModelViewSet):
             instance.team2_channel = data["team2_channel"]
         instance.save()
         return Response(self.get_serializer(instance).data)
-
-    @extend_schema(
-        request=CreateGuildMemberSerializer,
-        responses={200: GuildSerializer}
-    )
-    @action(detail=True, methods=["post"])
-    def add_member(self, request, pk=None):
-        guild = self.get_object()
-        return add_guild_member(guild, request)

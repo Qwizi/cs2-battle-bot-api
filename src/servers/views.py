@@ -16,6 +16,11 @@ class ServerViewSet(viewsets.ModelViewSet):
     serializer_class = ServerSerializer
     filterset_fields = ["guild", "is_public"]
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
+
     @action(detail=True, methods=["GET"], permission_classes=[AllowAny])
     def join(self, request, pk=None):
         server = self.get_object()

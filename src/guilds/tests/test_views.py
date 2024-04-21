@@ -48,7 +48,6 @@ def test_get_guilds_list(client_with_api_key, guild):
     assert response.data["results"][0]["name"] == guild.name
     assert response.data["results"][0]["owner"] is not None
     assert response.data["results"][0]["guild_id"] == guild.guild_id
-    assert len(response.data["results"][0]["members"]) == guild.members.count()
     assert response.data["next"] is None
     assert response.data["previous"] is None
 
@@ -60,8 +59,6 @@ def test_get_guild(client_with_api_key, guild):
     assert response.data["name"] == guild.name
     assert response.data["owner"] is not None
     assert response.data["guild_id"] == guild.guild_id
-    assert len(response.data["members"]) == guild.members.count()
-
 
 @pytest.mark.django_db
 def test_create_guild(client_with_api_key, guild_data):
@@ -70,7 +67,6 @@ def test_create_guild(client_with_api_key, guild_data):
     assert response.data["name"] == guild_data["name"]
     assert response.data["owner"] is not None
     assert response.data["guild_id"] == guild_data["guild_id"]
-    assert len(response.data["members"]) == len(guild_data["members"]) + 1
 
 @pytest.mark.django_db
 def test_delete_guild(client_with_api_key, guild):

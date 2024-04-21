@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from rcon import Client, EmptyResponse, SessionTimeout, WrongPassword
 import redis
 from rest_framework.authtoken.models import Token
+from rest_framework.reverse import reverse_lazy
 
 from guilds.models import Guild
 from matches.models import (
@@ -98,7 +99,7 @@ def create_match(request: Request) -> Response:
     --------
         Response: Response object.
     """
-    serializer = CreateMatchSerializer(data=request.data)
+    serializer = CreateMatchSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
     discord_users_ids = serializer.validated_data.get("discord_users_ids")
     match_type = serializer.validated_data.get("match_type", "BO1")
@@ -176,13 +177,14 @@ def create_match(request: Request) -> Response:
         map_sides=map_sides,
         server=server,
         cvars=cvars,
-        guild=guild
+        guild=guild,
+        webhook_url=str(reverse_lazy("match-webhook", request=request)),
     )
-    new_match_serializer = MatchSerializer(new_match)
+    new_match_serializer = MatchSerializer(new_match, context={"request": request})
     return Response(new_match_serializer.data, status=201)
 
 
-def load_match(pk: int) -> Response:
+def load_match(pk: int, request) -> Response:
     """
     Load a match into the server.
 
@@ -208,7 +210,7 @@ def load_match(pk: int) -> Response:
 
     send_rcon_command(match.server.ip, match.server.port, match.server.rcon_password, "css_endmatch")
     sleep(5)
-    match_serializer = MatchSerializer(match)
+    match_serializer = MatchSerializer(match, context={"request": request})
     send_rcon_command(match.server.ip, match.server.port, match.server.rcon_password, load_match_command, match_url,
                       api_key_header, api_key)
     return Response(match_serializer.data, status=200)
@@ -433,7 +435,7 @@ def shuffle_teams(request, pk: int) -> Response:
     match.team2.players.set(team2)
     match.team2.leader = team2[0]
     match.save()
-    match_serializer = MatchSerializer(match)
+    match_serializer = MatchSerializer(match, context={"request": request})
     return Response(match_serializer.data, status=200)
 
 
@@ -555,7 +557,7 @@ def join_match(request: Request, pk: int) -> Response:
     else:
         match.team2.players.add(player)
     match.save()
-    match_serializer = MatchSerializer(match)
+    match_serializer = MatchSerializer(match, context={"request": request})
     return Response(match_serializer.data, status=200)
 
 
@@ -587,7 +589,8 @@ def recreate_match(request, pk: int) -> Response:
         team2=match.team2,
         author=match.author,
         guild=match.guild,
-        server=match.server
+        server=match.server,
+        webhook_url=str(reverse_lazy("match-webhook", request=request)),
     )
-    new_match_serializer = MatchSerializer(new_match)
+    new_match_serializer = MatchSerializer(new_match, context={"request": request})
     return Response(new_match_serializer.data, status=201)
