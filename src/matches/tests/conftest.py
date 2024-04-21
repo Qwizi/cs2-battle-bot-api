@@ -1,4 +1,6 @@
 import pytest
+from django.test import RequestFactory
+from rest_framework.reverse import reverse_lazy
 
 from matches.models import Map, MatchType, Match
 from players.tests.conftest import player, discord_user_data, steam_user_data, players, teams, teams_with_players, default_author
@@ -63,25 +65,35 @@ def match_data(players, default_author, guild):
 
 @pytest.fixture
 def match(teams_with_players, players, default_author, guild):
+    factory = RequestFactory()
+
+    # Create a request
+    request = factory.get('/')
     team1, team2 = teams_with_players
     new_match = Match.objects.create_match(
         team1=team1,
         team2=team2,
         author=default_author.player.discord_user,
         map_sides=["knife", "knife", "knife"],
-        guild=guild
+        guild=guild,
+        webhook_url=str(reverse_lazy("match-webhook", request=request)),
     )
     return new_match
 
 @pytest.fixture
 def match_with_server(server, teams_with_players, default_author, guild):
     team1, team2 = teams_with_players
+    factory = RequestFactory()
+
+    # Create a request
+    request = factory.get('/')
     new_match = Match.objects.create_match(
         team1=team1,
         team2=team2,
         author=default_author.player.discord_user,
         map_sides=["knife", "knife", "knife"],
         server=server,
-        guild=guild
+        guild=guild,
+        webhook_url=str(reverse_lazy("match-webhook", request=request)),
     )
     return new_match

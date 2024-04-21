@@ -1,5 +1,6 @@
 import pytest
 from rest_framework import status
+from rest_framework.reverse import reverse_lazy
 
 from cs2_battle_bot.tests.conftest import api_client, client_with_api_key
 from guilds.models import Guild
@@ -44,8 +45,7 @@ def test_get_empty_servers_list(client_with_api_key):
 
 
 @pytest.mark.django_db
-def test_get_servers_list(client_with_api_key, server_data):
-    server = Server.objects.create(**server_data)
+def test_get_servers_list(client_with_api_key, server):
     response = client_with_api_key.get(API_ENDPOINT)
     assert response.status_code == 200
     assert response.data["count"] == 1
@@ -61,8 +61,7 @@ def test_get_servers_list(client_with_api_key, server_data):
 
 
 @pytest.mark.django_db
-def test_get_server_detail(client_with_api_key, server_data):
-    server = Server.objects.create(**server_data)
+def test_get_server_detail(client_with_api_key, server):
     response = client_with_api_key.get(f"{API_ENDPOINT}{server.id}/")
     assert response.status_code == 200
     assert response.data["id"] == server.id
@@ -71,6 +70,7 @@ def test_get_server_detail(client_with_api_key, server_data):
     assert response.data["port"] == server.port
     assert response.data["password"] == server.password
     assert response.data["is_public"] == server.is_public
+    assert response.data["join_url"] == reverse_lazy("server-join", args=[server.id], request=response.wsgi_request)
 
     # Ensure that the rcon_password is not exposed
     assert "rcon_password" not in response.data
@@ -155,9 +155,15 @@ def test_get_servers_list_with_guild_filter(client_with_api_key, server_data, gu
     assert "rcon_password" not in response.data["results"][0]
 
 @pytest.mark.django_db
-def test_delete_server(client_with_api_key, server_data):
-    server = Server.objects.create(**server_data)
+def test_delete_server(client_with_api_key, server):
     response = client_with_api_key.delete(f"{API_ENDPOINT}{server.id}/")
     assert response.status_code == 204
     assert Server.objects.count() == 0
     assert not Server.objects.filter(id=server.id).exists()
+
+
+@pytest.mark.django_db
+def test_server_join(client_with_api_key, server):
+    response = client_with_api_key.get(f"{API_ENDPOINT}{server.id}/join/")
+    assert response.status_code == 301
+    assert response.url == f"steam://connect/{server.ip}:{server.port}/{server.password}"

@@ -1,6 +1,7 @@
 from enum import Enum
 import re
 from rest_framework import serializers
+from rest_framework.reverse import reverse_lazy
 
 from guilds.serializers import GuildSerializer
 from matches.models import Map, MapBan, MapPick, Match, MatchType, MatchStatus
@@ -68,15 +69,25 @@ class MatchSerializer(serializers.ModelSerializer):
     last_map_ban = MapBanSerializer(read_only=True, allow_null=True)
     map_picks = MatchMapSelectedSerializer(many=True, read_only=True)
     last_map_pick = MatchMapSelectedSerializer(read_only=True, allow_null=True)
-    connect_command = serializers.CharField(
-        read_only=True, source="get_connect_command"
-    )
-    load_match_command = serializers.CharField(
-        read_only=True, source="get_load_match_command"
-    )
     author = DiscordUserSerializer(read_only=True)
     server = ServerSerializer(read_only=True, required=False, allow_null=True)
     guild = GuildSerializer(read_only=True)
+    config_url = serializers.SerializerMethodField(method_name="get_config_url")
+    webhook_url = serializers.SerializerMethodField(method_name="get_webhook_url")
+    connect_command = serializers.CharField(
+        read_only=True, source="get_connect_command"
+    )
+    load_match_command = serializers.SerializerMethodField(method_name="get_load_match_command")
+
+    def get_config_url(self, obj) -> str:
+        return reverse_lazy("match-config", args=[obj.id], request=self.context["request"])
+
+    def get_webhook_url(self, obj) -> str:
+        return reverse_lazy("match-webhook", request=self.context["request"])
+
+    def get_load_match_command(self, obj) -> str:
+        config_url = self.get_config_url(obj)
+        return f'{obj.load_match_command_name} "{config_url}" "{obj.api_key_header}" "{obj.get_author_token()}"'
 
     class Meta:
         model = Match
@@ -212,6 +223,7 @@ class MatchPickMapResultSerializer(serializers.Serializer):
 
     def get_next_pick_team(self, obj) -> TeamSerializer:
         return TeamSerializer(self.context["next_pick_team"]).data
+
 
 class MatchPlayerJoin(InteractionUserSerializer):
     pass

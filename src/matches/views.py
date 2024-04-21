@@ -42,6 +42,11 @@ class MatchViewSet(viewsets.ModelViewSet):
     queryset = Match.objects.all().order_by("created_at")
     serializer_class = MatchSerializer
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
+
     @extend_schema(
         request=CreateMatchSerializer,
         responses={201: MatchSerializer}
@@ -88,7 +93,7 @@ class MatchViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["POST"])
     def load(self, request, pk=None):
-        return load_match(pk)
+        return load_match(pk, request)
 
     @action(detail=False, methods=["POST"], permission_classes=[IsAuthenticated])
     def webhook(self, request):
