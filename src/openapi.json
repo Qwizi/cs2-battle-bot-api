@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "cs2-battle-bot-api",
-        "version": "0.0.20"
+        "version": "0.0.21"
     },
     "paths": {
         "/api/account-connect-link": {
@@ -1300,9 +1300,20 @@
                 }
             }
         },
-        "/api/matches/webhook/": {
+        "/api/matches/{id}/webhook/": {
             "post": {
                 "operationId": "matches_webhook_create",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this match.",
+                        "required": true
+                    }
+                ],
                 "tags": [
                     "matches"
                 ],
@@ -1703,16 +1714,9 @@
                 "parameters": [
                     {
                         "in": "query",
-                        "name": "guild",
+                        "name": "guild_or_public",
                         "schema": {
                             "type": "string"
-                        }
-                    },
-                    {
-                        "in": "query",
-                        "name": "is_public",
-                        "schema": {
-                            "type": "boolean"
                         }
                     },
                     {
@@ -2639,6 +2643,11 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "config": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "readOnly": true
+                    },
                     "webhook_url": {
                         "type": "string",
                         "readOnly": true
@@ -2699,6 +2708,7 @@
                 },
                 "required": [
                     "author",
+                    "config",
                     "config_url",
                     "connect_command",
                     "created_at",
@@ -3476,6 +3486,11 @@
                     },
                     "config_url": {
                         "type": "string",
+                        "readOnly": true
+                    },
+                    "config": {
+                        "type": "object",
+                        "additionalProperties": {},
                         "readOnly": true
                     },
                     "webhook_url": {
