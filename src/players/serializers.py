@@ -16,7 +16,7 @@ class SteamUserSerializer(serializers.ModelSerializer):
 
 class PlayerSerializer(serializers.ModelSerializer):
     discord_user = DiscordUserSerializer()
-    steam_user = SteamUserSerializer()
+    steam_user = SteamUserSerializer(allow_null=True)
 
     class Meta:
         model = Player

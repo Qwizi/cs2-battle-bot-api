@@ -93,8 +93,11 @@ def steam_callback(request):
     discord_user_session = request.session.get("dc_user", None)
     discord_user = DiscordUser.objects.get(user_id=discord_user_session["id"])
     player, _ = Player.objects.get_or_create(
-        discord_user=discord_user, steam_user=steam_user
+        discord_user=discord_user
     )
+    if not player.steam_user:
+        player.steam_user = steam_user
+        player.save()
     user = User.objects.get(username=discord_user.username)
     user.player = player
     user.save()

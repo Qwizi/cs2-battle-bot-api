@@ -59,6 +59,9 @@ def test_get_guild(client_with_api_key, guild):
     assert response.data["name"] == guild.name
     assert response.data["owner"] is not None
     assert response.data["guild_id"] == guild.guild_id
+    assert response.data["owner"]["username"] == guild.owner.username
+    assert response.data["owner"]["player"]["id"] == guild.owner.player.id
+    assert response.data["owner"]["player"]["discord_user"]["id"] == guild.owner.player.discord_user.id
 
 @pytest.mark.django_db
 def test_create_guild(client_with_api_key, guild_data):

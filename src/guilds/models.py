@@ -4,7 +4,7 @@ from django.db import models
 from prefix_id import PrefixIDField
 from rest_framework_api_key.models import AbstractAPIKey
 
-from players.models import DiscordUser
+from players.models import DiscordUser, Player
 
 UserModel = get_user_model()
 
@@ -14,7 +14,11 @@ UserModel = get_user_model()
 class GuildManager(models.Manager):
     def create_guild(self, owner_id: str, owner_username: str, **kwargs):
         dc_owner_user, _ = DiscordUser.objects.get_or_create(user_id=owner_id, username=owner_username)
+        player, _ = Player.objects.get_or_create(discord_user=dc_owner_user)
         owner_user, _ = UserModel.objects.get_or_create(username=owner_username)
+        if not owner_user.player:
+            owner_user.player = player
+            owner_user.save()
         guild = self.create(owner=owner_user, **kwargs)
         guild.save()
         return guild
