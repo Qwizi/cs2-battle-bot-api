@@ -76,7 +76,7 @@ def match(teams_with_players, players, default_author, guild):
         author=default_author.player.discord_user,
         map_sides=["knife", "knife", "knife"],
         guild=guild,
-        webhook_url=str(reverse_lazy("match-webhook", request=request)),
+        request=request
     )
     return new_match
 
@@ -86,7 +86,7 @@ def match_with_server(server, teams_with_players, default_author, guild):
     factory = RequestFactory()
 
     # Create a request
-    request = factory.get('/')
+    request2 = factory.get('/')
     new_match = Match.objects.create_match(
         team1=team1,
         team2=team2,
@@ -94,6 +94,6 @@ def match_with_server(server, teams_with_players, default_author, guild):
         map_sides=["knife", "knife", "knife"],
         server=server,
         guild=guild,
-        webhook_url=str(reverse_lazy("match-webhook", request=request)),
+        request=request2
     )
     return new_match

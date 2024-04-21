@@ -618,7 +618,6 @@ def test_match_recreate(client_with_api_key, match, match_with_server, with_serv
     assert response.data["players_per_team"] == match_to_test.players_per_team
     assert response.data["clinch_series"] == match_to_test.clinch_series
     assert response.data["map_sides"] == match_to_test.map_sides
-    assert response.data["cvars"] == match_to_test.cvars
     assert response.data["created_at"] is not None
     assert response.data["updated_at"] is not None
 

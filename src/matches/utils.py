@@ -178,7 +178,7 @@ def create_match(request: Request) -> Response:
         server=server,
         cvars=cvars,
         guild=guild,
-        webhook_url=str(reverse_lazy("match-webhook", request=request)),
+        request=request
     )
     new_match_serializer = MatchSerializer(new_match, context={"request": request})
     return Response(new_match_serializer.data, status=201)
@@ -463,7 +463,7 @@ def publish_event(event: str, data: dict):
     redis_client.publish(event, json.dumps(data))
 
 
-def process_webhook(request: Request) -> Response:
+def process_webhook(request: Request, pk) -> Response:
     """
     Process a webhook event.
 
@@ -476,53 +476,53 @@ def process_webhook(request: Request) -> Response:
         Response: Response object.
     """
     match_event_serializer = MatchEventSerializer(data=request.data)
-    if not match_event_serializer.is_valid():
-        return Response(match_event_serializer.errors, status=400)
+    match_event_serializer.is_valid(raise_exception=True)
     match_id = match_event_serializer.validated_data.get("matchid")
+    if match_id != pk:
+        return Response(
+            {"message": "Match ID in the request does not match the URL"},
+            status=400,
+        )
     match: Match = get_object_or_404(Match, pk=match_id)
     data = None
     redis_event = None
     match match_event_serializer.validated_data.get("event"):
         case MatchEventEnum.SERIES_START:
             series_start_serializer = MatchEventSeriesStartSerializer(data=request.data)
-            if not series_start_serializer.is_valid():
-                return Response(series_start_serializer.errors, status=400)
+            series_start_serializer.is_valid(raise_exception=True)
             data = series_start_serializer.validated_data
             match.status = MatchStatus.STARTED
             match.save()
-            redis_event = f"event.{MatchEventEnum.SERIES_START.value}"
+            redis_event = f"event.{match.guild.guild_id}.{MatchEventEnum.SERIES_START.value}"
         case MatchEventEnum.SERIES_END:
             series_end_serializer = MatchEventSeriesEndSerializer(data=request.data)
-            if not series_end_serializer.is_valid():
-                return Response(series_end_serializer.errors, status=400)
+            series_end_serializer.is_valid(raise_exception=True)
             data = series_end_serializer.validated_data
             match.status = MatchStatus.FINISHED
             match.save()
-            redis_event = f"event.{MatchEventEnum.SERIES_END.value}"
+            redis_event = f"event.{match.guild.guild_id}.{MatchEventEnum.SERIES_END.value}"
 
         case MatchEventEnum.MAP_RESULT:
             map_result_serializer = MatchEventMapResultSerializer(data=request.data)
-            if not map_result_serializer.is_valid():
-                return Response(map_result_serializer.errors, status=400)
+            map_result_serializer.is_valid(raise_exception=True)
             data = map_result_serializer.validated_data
-            redis_event = f"event.{MatchEventEnum.MAP_RESULT.value}"
+            redis_event = f"event.{match.guild.guild_id}.{MatchEventEnum.MAP_RESULT.value}"
         case MatchEventEnum.SIDE_PICKED:
-            redis_event = f"event.{MatchEventEnum.SIDE_PICKED.value}"
+            redis_event = f"event.{match.guild.guild_id}.{MatchEventEnum.SIDE_PICKED.value}"
         case MatchEventEnum.MAP_PICKED:
-            redis_event = f"event.{MatchEventEnum.MAP_PICKED.value}"
+            redis_event = f"event.{match.guild.guild_id}.{MatchEventEnum.MAP_PICKED.value}"
         case MatchEventEnum.MAP_VETOED:
-            redis_event = f"event.{MatchEventEnum.MAP_VETOED.value}"
+            redis_event = f"event.{match.guild.guild_id}.{MatchEventEnum.MAP_VETOED.value}"
         case MatchEventEnum.ROUND_END:
             data = request.data
-            redis_event = f"event.{MatchEventEnum.ROUND_END.value}"
+            redis_event = f"event.{match.guild.guild_id}.{MatchEventEnum.ROUND_END.value}"
         case MatchEventEnum.GOING_LIVE:
             going_live_serializer = MatchEventGoingLiveSerializer(data=request.data)
-            if not going_live_serializer.is_valid():
-                return Response(going_live_serializer.errors, status=400)
+            going_live_serializer.is_valid(raise_exception=True)
             data = going_live_serializer.validated_data
             match.status = MatchStatus.LIVE
             match.save()
-            redis_event = f"event.{MatchEventEnum.GOING_LIVE.value}"
+            redis_event = f"event.{match.guild.guild_id}.{MatchEventEnum.GOING_LIVE.value}"
 
     publish_event(redis_event, data)
     print(f"Published event: {redis_event} with data: {data}")
@@ -597,7 +597,7 @@ def recreate_match(request, pk: int) -> Response:
         author=match.author,
         guild=match.guild,
         server=match.server,
-        webhook_url=str(reverse_lazy("match-webhook", request=request)),
+        request=request
     )
     new_match_serializer = MatchSerializer(new_match, context={"request": request})
     return Response(new_match_serializer.data, status=201)
