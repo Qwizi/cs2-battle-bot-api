@@ -300,10 +300,13 @@ def ban_map(request: Request, pk: int) -> Response:
             status=400,
         )
     match.ban_map(user_team, map)
+    maps_left_without_picked_map = match.maplist.copy()
+    for map_pick in match.map_picks.all():
+        maps_left_without_picked_map.remove(map_pick.map.tag)
     ban_result_serializer = MatchBanMapResultSerializer(
         context={"banned_map": map, "next_ban_team": match.team1 if match.team2 == user_team else match.team2,},
         data={
-            "maps_left": match.maplist,
+            "maps_left": maps_left_without_picked_map,
             "map_bans_count": match.map_bans.count(),
         }
         )
@@ -394,10 +397,14 @@ def pick_map(request: Request, pk: int) -> Response["MatchPickMapResultSerialize
         )
 
     match.pick_map(user_team, map)
+    maps_left_without_picked_map = match.maplist.copy()
+    for map_pick in match.map_picks.all():
+        maps_left_without_picked_map.remove(map_pick.map.tag)
+
     map_pick_result_serializer = MatchPickMapResultSerializer(
         context={"picked_map": map, "next_pick_team": match.team1 if match.team2 == user_team else match.team2,},
         data={
-            "maps_left": match.maplist,
+            "maps_left": maps_left_without_picked_map,
             "map_picks_count": match.map_picks.count(),
         }
     )

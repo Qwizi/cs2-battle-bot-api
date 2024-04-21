@@ -37,7 +37,7 @@ class Player(models.Model):
 
     def __str__(self):
         return (
-            f"<{self.id} - {self.discord_user.username} - {self.steam_user.username}>"
+            f"<{self.id} - {self.discord_user.username} - {self.steam_user.username}>" if self.steam_user else  f"<{self.id} - {self.discord_user.username}>"
         )
 
 

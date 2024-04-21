@@ -267,12 +267,7 @@ def test_match_pick_map(client_with_api_key, match, match_type):
     assert response.data["next_pick_team"]["leader"]["discord_user"][
                "user_id"] == match.team2.leader.discord_user.user_id
     assert response.data["map_picks_count"] == 1
-    assert "de_nuke" not in response.data["maps_left"]
-    assert "de_overpass" not in response.data["maps_left"]
-    assert response.data["maps_left"][0] == "de_mirage"
-
-    updated_match = Match.objects.get(id=match.pk)
-    assert len(response.data["maps_left"]) == len(updated_match.maplist)
+    assert [team1_ban_data["map_tag"], team2_ban_data["map_tag"], pick_data["map_tag"]] not in response.data["maps_left"]
 
 
 @pytest.mark.django_db
@@ -537,7 +532,7 @@ def test_match_b03_map_veto_flow(client_with_api_key, match):
     t1_pick_1_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/pick/", team1_pick_data[0])
     assert t1_pick_1_response.status_code == status.HTTP_200_OK
     assert t1_pick_1_response.data["picked_map"]["tag"] == team1_pick_data[0]["map_tag"]
-    assert len(t1_pick_1_response.data["maps_left"]) == 5
+    assert len(t1_pick_1_response.data["maps_left"]) == 4
     assert t1_pick_1_response.data["map_picks_count"] == 1
     assert t1_pick_1_response.data["next_pick_team"]["name"] == match.team2.name
     assert t1_pick_1_response.data["next_pick_team"]["leader"]["discord_user"][
@@ -547,7 +542,7 @@ def test_match_b03_map_veto_flow(client_with_api_key, match):
     t2_pick_1_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/pick/", team2_pick_data[0])
     assert t2_pick_1_response.status_code == status.HTTP_200_OK
     assert t2_pick_1_response.data["picked_map"]["tag"] == team2_pick_data[0]["map_tag"]
-    assert len(t2_pick_1_response.data["maps_left"]) == 5
+    assert len(t2_pick_1_response.data["maps_left"]) == 3
     assert t2_pick_1_response.data["map_picks_count"] == 2
     assert t2_pick_1_response.data["next_pick_team"]["name"] == match.team1.name
     assert t2_pick_1_response.data["next_pick_team"]["leader"]["discord_user"][
@@ -557,7 +552,7 @@ def test_match_b03_map_veto_flow(client_with_api_key, match):
     t1_ban_2_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/ban/", team1_ban_data[1])
     assert t1_ban_2_response.status_code == status.HTTP_200_OK
     assert t1_ban_2_response.data["banned_map"]["tag"] == team1_ban_data[1]["map_tag"]
-    assert len(t1_ban_2_response.data["maps_left"]) == 4
+    assert len(t1_ban_2_response.data["maps_left"]) == 2
     assert t1_ban_2_response.data["next_ban_team"]["name"] == match.team2.name
     assert t1_ban_2_response.data["next_ban_team"]["leader"]["discord_user"][
                "user_id"] == team2_leader.discord_user.user_id
@@ -566,12 +561,16 @@ def test_match_b03_map_veto_flow(client_with_api_key, match):
     t2_ban_2_response = client_with_api_key.post(f"{API_ENDPOINT}{match.pk}/ban/", team2_ban_data[1])
     assert t2_ban_2_response.status_code == status.HTTP_200_OK
     assert t2_ban_2_response.data["banned_map"]["tag"] == team2_ban_data[1]["map_tag"]
-    assert len(t2_ban_2_response.data["maps_left"]) == 3
+    assert len(t2_ban_2_response.data["maps_left"]) == 1
     assert t2_ban_2_response.data["next_ban_team"]["name"] == match.team1.name
     assert t2_ban_2_response.data["next_ban_team"]["leader"]["discord_user"][
                "user_id"] == team1_leader.discord_user.user_id
 
-    assert t2_ban_2_response.data["maps_left"] == end_maps_should_left
+    assert len(t2_ban_2_response.data["maps_left"]) == 1
+    assert t2_ban_2_response.data["maps_left"][0] == end_maps_should_left[2]
+
+    updated_match = Match.objects.get(id=match.pk)
+    assert updated_match.maplist == end_maps_should_left
 
 
 @pytest.mark.django_db

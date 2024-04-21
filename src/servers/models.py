@@ -1,3 +1,4 @@
+from socket import gaierror
 from django.db import models
 from prefix_id import PrefixIDField
 from rcon import Client, EmptyResponse, SessionTimeout, WrongPassword
@@ -25,7 +26,7 @@ class Server(models.Model):
         try:
             gs.a2s_info((self.ip, self.port))
             return True
-        except (TimeoutError, ConnectionRefusedError):
+        except (TimeoutError, ConnectionRefusedError, gaierror):
             return False
 
     def get_join_link(self):
