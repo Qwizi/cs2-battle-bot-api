@@ -3548,7 +3548,12 @@
                         "$ref": "#/components/schemas/DiscordUser"
                     },
                     "steam_user": {
-                        "$ref": "#/components/schemas/SteamUser"
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SteamUser"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "created_at": {
                         "type": "string",
@@ -3659,7 +3664,12 @@
                         "$ref": "#/components/schemas/DiscordUser"
                     },
                     "steam_user": {
-                        "$ref": "#/components/schemas/SteamUser"
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SteamUser"
+                            }
+                        ],
+                        "nullable": true
                     },
                     "created_at": {
                         "type": "string",
