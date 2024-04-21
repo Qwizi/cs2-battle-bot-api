@@ -2,9 +2,34 @@
     "openapi": "3.0.3",
     "info": {
         "title": "cs2-battle-bot-api",
-        "version": "0.0.17"
+        "version": "0.0.18"
     },
     "paths": {
+        "/api/account-connect-link": {
+            "get": {
+                "operationId": "account_connect_link_retrieve",
+                "tags": [
+                    "account-connect-link"
+                ],
+                "security": [
+                    {
+                        "tokenAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccountConnectLink"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/discord-users/": {
             "get": {
                 "operationId": "discord_users_list",
@@ -434,51 +459,6 @@
                 "responses": {
                     "204": {
                         "description": "No response body"
-                    }
-                }
-            }
-        },
-        "/api/guilds/{guild_id}/add_member/": {
-            "post": {
-                "operationId": "guilds_add_member_create",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "guild_id",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "guilds"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CreateGuildMember"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "tokenAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Guild"
-                                }
-                            }
-                        },
-                        "description": ""
                     }
                 }
             }
@@ -2281,6 +2261,17 @@
     },
     "components": {
         "schemas": {
+            "AccountConnectLink": {
+                "type": "object",
+                "properties": {
+                    "link": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "link"
+                ]
+            },
             "CreateGuild": {
                 "type": "object",
                 "properties": {
@@ -2295,35 +2286,13 @@
                     },
                     "owner_username": {
                         "type": "string"
-                    },
-                    "members": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/CreateGuildMember"
-                        }
                     }
                 },
                 "required": [
                     "guild_id",
-                    "members",
                     "name",
                     "owner_id",
                     "owner_username"
-                ]
-            },
-            "CreateGuildMember": {
-                "type": "object",
-                "properties": {
-                    "user_id": {
-                        "type": "string"
-                    },
-                    "username": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "user_id",
-                    "username"
                 ]
             },
             "CreateMatch": {
@@ -2421,6 +2390,14 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "owner": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/User"
+                            }
+                        ],
+                        "readOnly": true
+                    },
                     "name": {
                         "type": "string",
                         "maxLength": 255
@@ -2453,22 +2430,12 @@
                         "type": "string",
                         "format": "date-time",
                         "readOnly": true
-                    },
-                    "owner": {
-                        "type": "string"
-                    },
-                    "members": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
                     }
                 },
                 "required": [
                     "created_at",
                     "guild_id",
                     "id",
-                    "members",
                     "name",
                     "owner",
                     "updated_at"
@@ -2643,14 +2610,6 @@
                         "readOnly": true,
                         "nullable": true
                     },
-                    "connect_command": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "load_match_command": {
-                        "type": "string",
-                        "readOnly": true
-                    },
                     "author": {
                         "allOf": [
                             {
@@ -2674,6 +2633,22 @@
                                 "$ref": "#/components/schemas/Guild"
                             }
                         ],
+                        "readOnly": true
+                    },
+                    "config_url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "webhook_url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "connect_command": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "load_match_command": {
+                        "type": "string",
                         "readOnly": true
                     },
                     "status": {
@@ -2724,6 +2699,7 @@
                 },
                 "required": [
                     "author",
+                    "config_url",
                     "connect_command",
                     "created_at",
                     "guild",
@@ -2738,6 +2714,7 @@
                     "team1",
                     "team2",
                     "updated_at",
+                    "webhook_url",
                     "winner_team"
                 ]
             },
@@ -3331,6 +3308,14 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "owner": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/User"
+                            }
+                        ],
+                        "readOnly": true
+                    },
                     "name": {
                         "type": "string",
                         "maxLength": 255
@@ -3363,15 +3348,6 @@
                         "type": "string",
                         "format": "date-time",
                         "readOnly": true
-                    },
-                    "owner": {
-                        "type": "string"
-                    },
-                    "members": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
                     }
                 }
             },
@@ -3473,14 +3449,6 @@
                         "readOnly": true,
                         "nullable": true
                     },
-                    "connect_command": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "load_match_command": {
-                        "type": "string",
-                        "readOnly": true
-                    },
                     "author": {
                         "allOf": [
                             {
@@ -3504,6 +3472,22 @@
                                 "$ref": "#/components/schemas/Guild"
                             }
                         ],
+                        "readOnly": true
+                    },
+                    "config_url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "webhook_url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "connect_command": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "load_match_command": {
+                        "type": "string",
                         "readOnly": true
                     },
                     "status": {
@@ -3614,6 +3598,10 @@
                     "guild": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "join_url": {
+                        "type": "string",
+                        "readOnly": true
                     }
                 }
             },
@@ -3728,11 +3716,16 @@
                     "guild": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "join_url": {
+                        "type": "string",
+                        "readOnly": true
                     }
                 },
                 "required": [
                     "id",
                     "ip",
+                    "join_url",
                     "name",
                     "port"
                 ]
@@ -3862,6 +3855,34 @@
                         "type": "string"
                     }
                 }
+            },
+            "User": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "username": {
+                        "type": "string",
+                        "description": "Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.",
+                        "pattern": "^[\\w.@+-]+$",
+                        "maxLength": 150
+                    },
+                    "player": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Player"
+                            }
+                        ],
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "id",
+                    "player",
+                    "username"
+                ]
             }
         },
         "securitySchemes": {
