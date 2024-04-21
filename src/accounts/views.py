@@ -1,10 +1,14 @@
 import httpx
 from django.http import HttpResponsePermanentRedirect, JsonResponse
 from django.shortcuts import redirect, render
+from drf_spectacular.utils import extend_schema
 from rest_framework.response import Response
+from rest_framework.reverse import reverse_lazy
+from rest_framework.views import APIView
 
 from accounts.auth import DiscordAuthService, SteamAuthService
 from accounts.schemas import SteamAuthSchema
+from accounts.serializers import AccountConnectLinkSerializer
 from players.models import DiscordUser, Player, SteamUser
 from django.contrib.auth import get_user_model
 
@@ -99,3 +103,15 @@ def steam_callback(request):
 
 def success(request):
     return render(request, "accounts/success.html")
+
+
+class AccountConnectLinkView(APIView):
+
+    @extend_schema(
+        responses={200: AccountConnectLinkSerializer}
+    )
+    def get(self, request):
+        link = str(reverse_lazy("redirect_to_discord", request=request))
+        serializer = AccountConnectLinkSerializer(data={"link": link})
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data)

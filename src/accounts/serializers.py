@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+from rest_framework.reverse import reverse_lazy
 
 from players.serializers import PlayerSerializer
 
@@ -12,3 +13,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserModel
         fields = ["id", "username", "player"]
+
+
+class AccountConnectLinkSerializer(serializers.Serializer):
+    link = serializers.CharField()

@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 
 from guilds.models import Guild
-from guilds.serializers import GuildSerializer, CreateGuildSerializer, CreateGuildMemberSerializer
+from guilds.serializers import GuildSerializer, CreateGuildSerializer
 from players.models import DiscordUser, Player
 
 UserModel = get_user_model()
@@ -41,33 +41,15 @@ def create_user(discord_user_id: str, discord_username: str) -> UserModel:
     return user, discord_user
 
 
-def create_members(members: list[CreateGuildMemberSerializer]) -> list[DiscordUser]:
-    return [create_discord_user(member.validated_data["user_id"], member.validated_data["username"]) for member in
-            members]
-
-
 def create_guild(request) -> Response["GuildSerializer"]:
     serializer = CreateGuildSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     owner_id = serializer.validated_data["owner_id"]
     owner_username = serializer.validated_data["owner_username"]
-    members = serializer.validated_data["members"]
     guild = Guild.objects.create_guild(
         name=serializer.validated_data["name"],
         guild_id=serializer.validated_data["guild_id"],
         owner_id=owner_id,
         owner_username=owner_username,
-        members=members
     )
     return Response(GuildSerializer(guild).data, status=201)
-
-
-def add_guild_member(guild: Guild, request) -> Response["GuildSerializer"]:
-    serializer = CreateGuildMemberSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    user_id = serializer.validated_data["user_id"]
-    username = serializer.validated_data["username"]
-    dc_user = get_object_or_404(DiscordUser, user_id=user_id, username=username)
-    guild.members.add(dc_user)
-    guild.save()
-    return Response(GuildSerializer(guild).data)
