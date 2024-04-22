@@ -2345,6 +2345,12 @@
                         "additionalProperties": {
                             "type": "string"
                         }
+                    },
+                    "maplist": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
                     }
                 },
                 "required": [
