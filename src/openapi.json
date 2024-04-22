@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "cs2-battle-bot-api",
-        "version": "0.0.21"
+        "version": "0.0.22"
     },
     "paths": {
         "/api/account-connect-link": {
@@ -2644,8 +2644,11 @@
                         "readOnly": true
                     },
                     "config": {
-                        "type": "object",
-                        "additionalProperties": {},
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MatchConfig"
+                            }
+                        ],
                         "readOnly": true
                     },
                     "webhook_url": {
@@ -3489,8 +3492,11 @@
                         "readOnly": true
                     },
                     "config": {
-                        "type": "object",
-                        "additionalProperties": {},
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MatchConfig"
+                            }
+                        ],
                         "readOnly": true
                     },
                     "webhook_url": {

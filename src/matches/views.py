@@ -1,10 +1,9 @@
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, OpenApiResponse
-from rest_framework.exceptions import ValidationError
-from rest_framework.parsers import FileUploadParser
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from drf_spectacular.utils import extend_schema
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from accounts.auth import BearerTokenAuthentication
 from guilds.models import Guild
@@ -12,17 +11,14 @@ from matches.models import (
     Map,
     Match,
 )
-from rest_framework import viewsets
-from rest_framework.decorators import action
-
 from matches.permissions import IsAuthor
 from matches.serializers import (
     MapBanSerializer,
     MapSerializer,
     MatchConfigSerializer,
     MatchMapSelectedSerializer,
-    MatchSerializer, CreateMatchSerializer, MatchBanMapSerializer, MatchPickMapSerializer, MatchPlayerJoin,
-    MatchBanMapResultSerializer, MatchPickMapResultSerializer, InteractionUserSerializer, MatchUpdateSerializer,
+    MatchSerializer, CreateMatchSerializer, MatchBanMapSerializer, MatchPickMapSerializer, MatchBanMapResultSerializer,
+    MatchPickMapResultSerializer, InteractionUserSerializer, MatchUpdateSerializer,
 )
 from matches.utils import (
     ban_map,
