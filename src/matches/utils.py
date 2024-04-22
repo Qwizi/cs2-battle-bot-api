@@ -112,6 +112,7 @@ def create_match(request: Request) -> Response:
     server_id = serializer.validated_data.get("server_id")
     guild_id = serializer.validated_data.get("guild_id")
     cvars = serializer.validated_data.get("cvars")
+    maplist = serializer.validated_data.get("maplist")
     if len(discord_users_ids) < 2:
         return Response({"message": "At least 2 players are required"}, status=400)
     server = None
@@ -178,7 +179,8 @@ def create_match(request: Request) -> Response:
         server=server,
         cvars=cvars,
         guild=guild,
-        request=request
+        request=request,
+        maplist=maplist
     )
     new_match_serializer = MatchSerializer(new_match, context={"request": request})
     return Response(new_match_serializer.data, status=201)

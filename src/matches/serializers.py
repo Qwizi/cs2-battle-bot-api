@@ -91,8 +91,8 @@ class MatchSerializer(serializers.ModelSerializer):
         config_url = self.get_config_url(obj)
         return f'{obj.load_match_command_name} "{config_url}" "{obj.api_key_header}" "{obj.get_author_token()}"'
 
-    def get_config(self, obj) -> dict:
-        return obj.get_config()
+    def get_config(self, obj) -> MatchConfigSerializer:
+        return MatchConfigSerializer(obj.get_config()).data
 
     class Meta:
         model = Match
@@ -138,6 +138,7 @@ class CreateMatchSerializer(serializers.Serializer):
     cvars = serializers.DictField(
         child=serializers.CharField(required=False), required=False
     )
+    maplist = serializers.ListField(child=serializers.CharField(), required=False)
 
 
 class MatchTeamWrapperSerializer(serializers.Serializer):

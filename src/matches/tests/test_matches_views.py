@@ -140,6 +140,16 @@ def test_create_match(client_with_api_key, match_data, with_server, match_type, 
     assert response.data["players_per_team"] == 5
     assert response.data["cvars"]["sv_cheats"] == "1"
 
+@pytest.mark.django_db
+def test_create_match_with_maplist(client_with_api_key, match_data):
+    match_data["match_type"] = MatchType.BO3
+    match_data["maplist"] = ["de_mirage", "de_nuke", "de_inferno"]
+    response = client_with_api_key.post(API_ENDPOINT, match_data)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data["maplist"] == match_data["maplist"]
+    assert response.data["config"]["maplist"] == match_data["maplist"]
+    assert response.data["config"]["num_maps"] == 3
+
 
 @pytest.mark.django_db
 def test_create_match_with_server_offline(client_with_api_key, match_data, server, mocker):
