@@ -62,7 +62,10 @@ class MapPick(models.Model):
 class MatchManager(models.Manager):
     def create_match(self, **kwargs):
         maps = Map.objects.all()
-        maplist = kwargs.pop("maplist", [map.tag for map in maps])
+        maplist = kwargs.pop("maplist", None)
+        if not maplist:
+            maplist = [map.tag for map in maps]
+        print(maplist)
         map_sides = kwargs.pop("map_sides", ["knife", "knife", "knife"])
         match_type = kwargs.pop("type", MatchType.BO1)
         team1 = kwargs.pop("team1", None)
