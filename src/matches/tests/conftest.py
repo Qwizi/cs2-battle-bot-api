@@ -70,14 +70,14 @@ def match(teams_with_players, players, default_author, guild):
     # Create a request
     request = factory.get('/')
     team1, team2 = teams_with_players
-    new_match = Match.objects.create_match(
+    new_match: Match = Match.objects.create_match(
         team1=team1,
         team2=team2,
         author=default_author.player.discord_user,
         map_sides=["knife", "knife", "knife"],
         guild=guild,
-        request=request
     )
+    new_match.create_webhook_cvars(str(reverse_lazy("match-webhook", args=[new_match.pk], request=request)))
     return new_match
 
 @pytest.fixture
@@ -94,6 +94,6 @@ def match_with_server(server, teams_with_players, default_author, guild):
         map_sides=["knife", "knife", "knife"],
         server=server,
         guild=guild,
-        request=request2
     )
+    new_match.create_webhook_cvars(str(reverse_lazy("match-webhook", args=[new_match.pk], request=request2)))
     return new_match
