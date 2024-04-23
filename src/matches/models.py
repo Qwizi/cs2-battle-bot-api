@@ -74,7 +74,6 @@ class MatchManager(models.Manager):
         server = kwargs.pop("server", None)
         num_maps = kwargs.pop("num_maps", 1 if match_type == MatchType.BO1 else 3)
         cvars = kwargs.pop("cvars", None)
-        request = kwargs.pop("request", None)
         players_list = team1.players.all() | team2.players.all()
         player_per_team = len(players_list) / 2
         players_per_team_rounded = math.ceil(player_per_team)
@@ -92,7 +91,6 @@ class MatchManager(models.Manager):
             cvars=cvars,
         )
         match.maps.set(maps)
-        match.create_webhook_cvars(webhook_url=str(reverse_lazy("match-webhook", args=[match.pk], request=request)))
         match.save()
         return match
 
@@ -205,6 +203,7 @@ class Match(models.Model):
             "matchzy_remote_log_header_key": self.api_key_header,
             "matchzy_remote_log_header_value": self.get_author_token(),
         })
+        self.save()
 
     def get_maps_tags(self):
         return [map.tag for map in self.maps.all()]

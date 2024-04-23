@@ -18,7 +18,7 @@ def test_match_model(teams_with_players, default_author, with_server, match_type
 
     # Create a request
     request = factory.get('/')
-    new_match = Match.objects.create_match(
+    new_match: Match = Match.objects.create_match(
         team1=team1,
         team2=team2,
         author=default_author.player.discord_user,
@@ -26,8 +26,8 @@ def test_match_model(teams_with_players, default_author, with_server, match_type
         clinch_series=clinch_series,
         map_sides=["knife", "knife", "knife"],
         server=server,
-        request=request
     )
+    new_match.create_webhook_cvars(str(reverse_lazy("match-webhook", args=[new_match.pk], request=request)))
     assert new_match.status == MatchStatus.CREATED
     assert new_match.type == match_type
     assert new_match.team1 == team1

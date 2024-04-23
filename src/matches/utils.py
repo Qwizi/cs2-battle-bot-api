@@ -169,7 +169,7 @@ def create_match(request: Request) -> Response:
 
     team1, team2 = create_default_teams("Team 1", "Team 2", players_list)
     guild = get_object_or_404(Guild, pk=guild_id)
-    new_match = Match.objects.create_match(
+    new_match: Match = Match.objects.create_match(
         team1=team1,
         team2=team2,
         author=author,
@@ -179,9 +179,9 @@ def create_match(request: Request) -> Response:
         server=server,
         cvars=cvars,
         guild=guild,
-        request=request,
         maplist=maplist
     )
+    new_match.create_webhook_cvars(webhook_url=str(reverse_lazy("match-webhook", args=[new_match.pk], request=request)))
     new_match_serializer = MatchSerializer(new_match, context={"request": request})
     return Response(new_match_serializer.data, status=201)
 
@@ -599,7 +599,7 @@ def recreate_match(request, pk: int) -> Response:
         author=match.author,
         guild=match.guild,
         server=match.server,
-        request=request
     )
+    new_match.create_webhook_cvars(str(reverse_lazy("match-webhook", args=[new_match.pk], request=request)))
     new_match_serializer = MatchSerializer(new_match, context={"request": request})
     return Response(new_match_serializer.data, status=201)
