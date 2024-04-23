@@ -1,10 +1,11 @@
 services:
   app:
     build:
-      context: ./src
+      context: ./
       dockerfile: Dockerfile
     container_name: cs2_battle_bot_api_prod
     command: sh -c "gunicorn cs2_battle_bot.wsgi:application --bind 0.0.0.0:8000"
+#    command: sh -c "ls"
     expose:
       - "8000"
     volumes:
