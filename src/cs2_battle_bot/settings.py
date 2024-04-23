@@ -37,6 +37,8 @@ CSRF_TRUSTED_ORIGINS = os.environ.get(
     "CSRF_TRUSTED_ORIGINS", "http://localhost:8002"
 ).split(",")
 
+SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "False")
+
 # Application definition
 
 INSTALLED_APPS = [
