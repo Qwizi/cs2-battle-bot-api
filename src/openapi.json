@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "cs2-battle-bot-api",
-        "version": "0.0.27"
+        "version": "0.0.28"
     },
     "paths": {
         "/api/account-connect-link": {
