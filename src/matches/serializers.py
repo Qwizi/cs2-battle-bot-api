@@ -89,7 +89,7 @@ class MatchSerializer(serializers.ModelSerializer):
 
     def get_load_match_command(self, obj) -> str:
         config_url = self.get_config_url(obj)
-        return f'{obj.load_match_command_name} "{config_url}" "{obj.api_key_header}" "{obj.get_author_token()}"'
+        return f'{obj.load_match_command_name} "{config_url}" "{obj.api_key_header}" "Bearer {obj.get_author_token()}"'
 
     def get_config(self, obj) -> MatchConfigSerializer:
         return MatchConfigSerializer(obj.get_config()).data

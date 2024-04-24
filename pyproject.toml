@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cs2-battle-bot-api"
-version = "0.0.30"
+version = "0.0.31"
 description = ""
 authors = ["Adrian Ciolek <ciolek.adrian@protonmail.com>"]
 readme = "README.md"
