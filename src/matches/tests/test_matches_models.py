@@ -60,7 +60,7 @@ def test_match_model(teams_with_players, default_author, with_server, match_type
     assert match_config["cvars"] == new_match.cvars
     assert match_config["cvars"]["matchzy_remote_log_url"] == reverse_lazy("match-webhook", args=[new_match.pk], request=request)
     assert match_config["cvars"]["matchzy_remote_log_header_key"] == new_match.api_key_header
-    assert match_config["cvars"]["matchzy_remote_log_header_value"] == new_match.get_author_token()
+    assert match_config["cvars"]["matchzy_remote_log_header_value"] == f"Bearer {new_match.get_author_token()}"
 
     connect_command = new_match.get_connect_command()
     assert connect_command == "" if with_server is False else server.get_connect_string()
@@ -68,12 +68,8 @@ def test_match_model(teams_with_players, default_author, with_server, match_type
     author_token = new_match.get_author_token()
     assert author_token == Token.objects.get(user=default_author).key
 
-    assert new_match.config_url == f"{settings.HOST_URL}/api/matches/{new_match.pk}/config/"
     assert new_match.load_match_command_name == "matchzy_loadmatch_url"
-    assert new_match.api_key_header == "Bearer"
-
-    assert new_match.webhook_url == f"{settings.HOST_URL}/api/matches/webhook/"
-    assert new_match.get_load_match_command() == f'matchzy_loadmatch_url "{new_match.config_url}" "Bearer" "{author_token}"'
+    assert new_match.api_key_header == "Authorization"
 
 
 

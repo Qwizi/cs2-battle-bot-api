@@ -142,16 +142,8 @@ class Match(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     @property
-    def config_url(self):
-        return f"{settings.HOST_URL}/api/matches/{self.pk}/config/"
-
-    @property
-    def webhook_url(self):
-        return f"{settings.HOST_URL}/api/matches/webhook/"
-
-    @property
     def api_key_header(self):
-        return "Bearer"
+        return "Authorization"
 
     @property
     def load_match_command_name(self):
@@ -193,15 +185,12 @@ class Match(models.Model):
     def get_author_token(self):
         return UserModel.objects.get(player__discord_user=self.author).get_token()
 
-    def get_load_match_command(self):
-        return f'{self.load_match_command_name} "{self.config_url}" "{self.api_key_header}" "{self.get_author_token()}"'
-
     def create_webhook_cvars(self, webhook_url: str):
         self.cvars = self.cvars or {}
         self.cvars.update({
             "matchzy_remote_log_url": webhook_url,
             "matchzy_remote_log_header_key": self.api_key_header,
-            "matchzy_remote_log_header_value": self.get_author_token(),
+            "matchzy_remote_log_header_value": f"Bearer {self.get_author_token()}",
         })
         self.save()
 
