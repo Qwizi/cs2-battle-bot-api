@@ -14,7 +14,6 @@ import os
 from pathlib import Path
 
 import toml
-from rest_framework.authentication import TokenAuthentication
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,9 +36,10 @@ CSRF_TRUSTED_ORIGINS = os.environ.get(
     "CSRF_TRUSTED_ORIGINS", "http://localhost:8002"
 ).split(",")
 
-SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "False") == "True"
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
+SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "True") == "True"
+# ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_PROXY_SSL_HEADER = tuple(os.environ.get("SECURE_PROXY_SSL_HEADER", "").split(',')) if os.environ.get(
+    "SECURE_PROXY_SSL_HEADER") else None
 # Application definition
 
 INSTALLED_APPS = [
@@ -69,7 +69,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
-        #'accounts.auth.BearerTokenAuthentication',
+        # 'accounts.auth.BearerTokenAuthentication',
     ],
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
@@ -126,9 +126,9 @@ WSGI_APPLICATION = "cs2_battle_bot.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": os.environ.get("DB_ENGINE", "django.db.backends.sqlite3"),
-        "NAME": os.environ.get("DB_NAME", BASE_DIR / "db.sqlite3"),
-        "USER": os.environ.get("DB_USER", "user"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", "password"),
+        "NAME": os.environ.get("POSTGRES_DB", BASE_DIR / "db.sqlite3"),
+        "USER": os.environ.get("POSTGRES_USER", "user"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "password"),
         "HOST": os.environ.get("DB_HOST", "localhost"),
         "PORT": os.environ.get("DB_PORT", "5432"),
     },
@@ -137,7 +137,7 @@ DATABASES = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/1"),
+        "LOCATION": f"redis://:{os.environ.get('REDIS_PASSWORD')}@{os.environ.get('REDIS_HOST')}:{os.environ.get('REDIS_PORT')}/{os.environ.get('REDIS_DB')}",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
@@ -181,21 +181,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-HOST_URL = os.environ.get("HOST_URL", "http://localhost:8002")
-
 DISCORD_CLIENT_ID = os.environ.get("DISCORD_CLIENT_ID", "id")
 DISCORD_CLIENT_SECRET = os.environ.get("DISCORD_CLIENT_SECRET", "secret")
-DISCORD_REDIRECT_URI = os.environ.get("DISCORD_REDIRECT_URI", "uri")
 
 STEAM_API_KEY = os.environ.get("STEAM_API_KEY", "key")
-STEAM_REDIRECT_URI = os.environ.get("STEAM_REDIRECT_URI", "uri")
-
-RCON_HOST = os.environ.get("RCON_HOST", "localhost")
-RCON_PORT = os.environ.get("RCON_PORT", 27015)
-RCON_PASSWORD = os.environ.get("RCON_PASSWORD", "password")
-SERVER_PORT = os.environ.get("SERVER_PORT", 27015)
-SERVER_PASSWORD = os.environ.get("SERVER_PASSWORD", "changeme")
-API_KEY = os.environ.get("API_KEY", "key")
 
 AUTH_USER_MODEL = "accounts.User"  # new
 
