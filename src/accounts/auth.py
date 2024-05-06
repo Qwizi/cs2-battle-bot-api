@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.urls import reverse_lazy, reverse
 import httpx
 from rest_framework.authentication import TokenAuthentication
 from rest_framework_api_key.models import APIKey
@@ -33,8 +34,19 @@ class SteamAuthService:
         """Initialize the SteamAuthService."""
         self.auth_url = "https://steamcommunity.com/openid/login"
 
-    def get_login_url(self):
-        return f"{self.auth_url}?openid.ns=http://specs.openid.net/auth/2.0&openid.identity=http://specs.openid.net/auth/2.0/identifier_select&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select&openid.mode=checkid_setup&openid.return_to={settings.STEAM_REDIRECT_URI}&openid.realm={settings.HOST_URL}/"
+    def get_login_url(self, request):
+        steam_callback_relative_url = reverse('steam_callback')
+        steam_callback_full_url = request.build_absolute_uri(steam_callback_relative_url)
+        openid_realm = request.build_absolute_uri()
+        #  remove from url /accounts/steam/
+        openid_realm = openid_realm[:-15]
+        return (f""
+                f"{self.auth_url}?openid.ns=http://specs.openid.net/auth/2.0"
+                f"&openid.identity=http://specs.openid.net/auth/2.0/identifier_select" 
+                f"&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select"
+                f"&openid.mode=checkid_setup"
+                f"&openid.return_to={steam_callback_full_url}"
+                f"&openid.realm={openid_realm}")
 
     @staticmethod
     def get_steamid_from_url(url: str) -> str:
@@ -162,8 +174,13 @@ class DiscordAuthService:
         self.auth_url = "https://discord.com/api/oauth2/authorize"
         self.token_url = "https://discord.com/api/oauth2/token"
 
-    def get_login_url(self):
-        return f"{self.auth_url}?client_id={settings.DISCORD_CLIENT_ID}&response_type=code&redirect_uri={settings.DISCORD_REDIRECT_URI}&scope=identify+email"
+    def get_login_url(self, request):
+        redirect_url = request.build_absolute_uri(reverse_lazy("discord_callback"))
+        return (f""
+                f"{self.auth_url}?client_id={settings.DISCORD_CLIENT_ID}"
+                f"&response_type=code"
+                f"&redirect_uri={redirect_url}"
+                f"&scope=identify+email")
 
     def exchange_code(self, code: str) -> dict:
         """

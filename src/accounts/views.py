@@ -17,7 +17,7 @@ User = get_user_model()
 
 def redirect_to_discord(request):
     discord_auth = DiscordAuthService()
-    return redirect(discord_auth.get_login_url())
+    return redirect(discord_auth.get_login_url(request=request))
 
 
 def discord_callback(request):
@@ -60,7 +60,7 @@ def redirect_to_steam(request):
     if not dc_user:
         return redirect("/accounts/discord/")
     steam_auth = SteamAuthService()
-    return redirect(steam_auth.get_login_url())
+    return redirect(steam_auth.get_login_url(request=request))
 
 
 def steam_callback(request):

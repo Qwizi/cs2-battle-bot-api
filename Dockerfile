@@ -33,6 +33,8 @@ COPY --from=builder /code /app
 
 # Copy the source code
 COPY src /app/
+COPY scripts /app/scripts
+
 
 # Change ownership to the dedicated user
 RUN chown -R fastapiuser:fastapi /app
