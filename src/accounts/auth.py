@@ -175,14 +175,15 @@ class DiscordAuthService:
         self.token_url = "https://discord.com/api/oauth2/token"
 
     def get_login_url(self, request):
-        redirect_url = request.build_absolute_uri(reverse_lazy("discord_callback"))
+        redirect_url = request.build_absolute_uri(reverse("discord_callback"))
+        print(redirect_url)
         return (f""
                 f"{self.auth_url}?client_id={settings.DISCORD_CLIENT_ID}"
                 f"&response_type=code"
                 f"&redirect_uri={redirect_url}"
                 f"&scope=identify+email")
 
-    def exchange_code(self, code: str) -> dict:
+    def exchange_code(self, code: str, request) -> dict:
         """
         Exchange a code for an access token.
 
@@ -194,10 +195,11 @@ class DiscordAuthService:
         -------
             dict: The access token.
         """
+        redirect_url = request.build_absolute_uri(reverse("discord_callback"))
         data = {
             "grant_type": "authorization_code",
             "code": code,
-            "redirect_uri": settings.DISCORD_REDIRECT_URI,
+            "redirect_uri": redirect_url,
         }
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         with httpx.Client() as client:

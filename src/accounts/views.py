@@ -25,7 +25,7 @@ def discord_callback(request):
 
     discord_auth = DiscordAuthService()
     try:
-        token = discord_auth.exchange_code(code)
+        token = discord_auth.exchange_code(code, request=request)
     except httpx.HTTPError as e:
         print(e)
         return JsonResponse({"error": repr(e)}, status=400)
