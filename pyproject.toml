@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cs2-battle-bot-api"
-version = "0.0.35"
+version = "0.0.36"
 description = ""
 authors = ["Adrian Ciolek <ciolek.adrian@protonmail.com>"]
 readme = "README.md"
@@ -11,7 +11,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.11"
-django = "^5.0.2"
+django = "^5.0.6"
 httpx = "^0.27.0"
 psycopg2-binary = "^2.9.9"
 django-prefix-id = "^1.0.0"

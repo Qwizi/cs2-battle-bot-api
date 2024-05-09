@@ -192,9 +192,12 @@ AUTH_USER_MODEL = "accounts.User"  # new
 def get_spectacular_settings():
     # Load the pyproject.toml file
     pyproject_path = Path(__file__).resolve().parent.parent / "pyproject.toml"
-    if DEBUG is True:
+    pyproject_data = None
+    try:
+        pyproject_data = toml.load(pyproject_path)
+    except FileNotFoundError:
         pyproject_path = Path(__file__).resolve().parent.parent.parent / "pyproject.toml"
-    pyproject_data = toml.load(pyproject_path)
+        pyproject_data = toml.load(pyproject_path)
 
     # Get the name, version, and description
     name = pyproject_data.get("tool", {}).get("poetry", {}).get("name", "")
@@ -203,7 +206,6 @@ def get_spectacular_settings():
 
     # Assign them to the SPECTACULAR_SETTINGS dictionary
     return {"TITLE": name, "VERSION": version, "DESCRIPTION": description}
-
 
 # Use the function
 SPECTACULAR_SETTINGS = get_spectacular_settings()
