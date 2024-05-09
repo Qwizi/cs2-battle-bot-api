@@ -8,6 +8,7 @@ from rcon import Client, EmptyResponse, SessionTimeout, WrongPassword
 import redis
 from rest_framework.authtoken.models import Token
 from rest_framework.reverse import reverse_lazy
+from typing_extensions import deprecated
 
 from guilds.models import Guild
 from matches.models import (
@@ -16,7 +17,7 @@ from matches.models import (
     MapBan,
     MapPick,
     MatchStatus,
-    MatchType,
+    MatchType, MatchConfig,
 )
 from matches.serializers import (
     CreateMatchSerializer,
@@ -30,7 +31,7 @@ from matches.serializers import (
     MatchPickMapSerializer,
     MatchPlayerJoin,
     MatchSerializer, MatchBanMapResultSerializer, MatchPickMapResultSerializer, InteractionUserSerializer,
-    MapSerializer,
+    MapSerializer, MatchPlayerLeave,
 )
 from players.models import DiscordUser, Player, Team
 from players.serializers import TeamSerializer
@@ -87,7 +88,8 @@ def check_server_is_available_for_match(server: Server) -> bool:
     return True
 
 
-def create_match(request: Request) -> Response:
+
+def create_match_deprecated(request: Request) -> Response:
     """
     Create a new match.
 
@@ -182,6 +184,44 @@ def create_match(request: Request) -> Response:
         maplist=maplist
     )
     new_match.create_webhook_cvars(webhook_url=str(reverse_lazy("match-webhook", args=[new_match.pk], request=request)))
+    new_match_serializer = MatchSerializer(new_match, context={"request": request})
+    return Response(new_match_serializer.data, status=201)
+
+
+def create_match(request: Request) -> Response:
+    """
+    Create a new match.
+
+    Args:
+    -----
+        request (Request): Request object.
+
+    Returns:
+    --------
+        Response: Response object.
+    """
+    serializer = CreateMatchSerializer(data=request.data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+    author_id = serializer.validated_data.get("author_id")
+    server_id = serializer.validated_data.get("server_id")
+    guild_id = serializer.validated_data.get("guild_id")
+    config_id = serializer.validated_data.get("config_id")
+    author = DiscordUser.objects.get(user_id=author_id)
+    guild = Guild.objects.get(guild_id=guild_id)
+    config = MatchConfig.objects.get(id=config_id)
+
+    server = None
+    if server_id:
+        server = Server.objects.get(pk=server_id)
+    new_match: Match = Match.objects.create(
+        config=config,
+        author=author,
+        guild=guild,
+    )
+    new_match.create_webhook_cvars(webhook_url=str(reverse_lazy("match-webhook", args=[new_match.pk], request=request)))
+    if server:
+        new_match.server = server
+        new_match.save()
     new_match_serializer = MatchSerializer(new_match, context={"request": request})
     return Response(new_match_serializer.data, status=201)
 
@@ -306,12 +346,12 @@ def ban_map(request: Request, pk: int) -> Response:
     for map_pick in match.map_picks.all():
         maps_left_without_picked_map.remove(map_pick.map.tag)
     ban_result_serializer = MatchBanMapResultSerializer(
-        context={"banned_map": map, "next_ban_team": match.team1 if match.team2 == user_team else match.team2,},
+        context={"banned_map": map, "next_ban_team": match.team1 if match.team2 == user_team else match.team2, },
         data={
             "maps_left": maps_left_without_picked_map,
             "map_bans_count": match.map_bans.count(),
         }
-        )
+    )
     ban_result_serializer.is_valid(raise_exception=True)
     return Response(ban_result_serializer.data, status=200)
 
@@ -404,7 +444,7 @@ def pick_map(request: Request, pk: int) -> Response["MatchPickMapResultSerialize
         maps_left_without_picked_map.remove(map_pick.map.tag)
 
     map_pick_result_serializer = MatchPickMapResultSerializer(
-        context={"picked_map": map, "next_pick_team": match.team1 if match.team2 == user_team else match.team2,},
+        context={"picked_map": map, "next_pick_team": match.team1 if match.team2 == user_team else match.team2, },
         data={
             "maps_left": maps_left_without_picked_map,
             "map_picks_count": match.map_picks.count(),
@@ -531,44 +571,6 @@ def process_webhook(request: Request, pk) -> Response:
     return Response({"event": redis_event, "data": data}, status=200)
 
 
-def join_match(request: Request, pk: int) -> Response:
-    """
-    Join a match.
-
-    Args:
-    -----
-        request (Request): Request object.
-        pk (int): Match ID.
-
-    Returns:
-    --------
-        Response: Response object.
-    """
-    match: Match = get_object_or_404(Match, pk=pk)
-    match_player_join_serializer = MatchPlayerJoin(data=request.data)
-    if not match_player_join_serializer.is_valid():
-        return Response(match_player_join_serializer.errors, status=400)
-
-    discord_user_id = match_player_join_serializer.validated_data.get("interaction_user_id")
-    player = get_object_or_404(Player, discord_user__user_id=discord_user_id)
-    if match.team1.players.filter(pk=player.id).exists():
-        return Response(
-            {"message": f"Player {player.steam_user.username} is already in team 1"},
-            status=400,
-        )
-    if match.team2.players.filter(pk=player.id).exists():
-        return Response(
-            {"message": f"Player {player.steam_user.username} is already in team 2"},
-            status=400,
-        )
-    if match.team1.players.count() < match.team2.players.count():
-        match.team1.players.add(player)
-    else:
-        match.team2.players.add(player)
-    match.save()
-    match_serializer = MatchSerializer(match, context={"request": request})
-    return Response(match_serializer.data, status=200)
-
 
 def recreate_match(request, pk: int) -> Response:
     """
@@ -603,3 +605,55 @@ def recreate_match(request, pk: int) -> Response:
     new_match.create_webhook_cvars(str(reverse_lazy("match-webhook", args=[new_match.pk], request=request)))
     new_match_serializer = MatchSerializer(new_match, context={"request": request})
     return Response(new_match_serializer.data, status=201)
+
+
+def join_match(request: Request, pk: int) -> Response:
+    """
+    Join a player to a team.
+
+    Args:
+    -----
+        request (Request): Request object.
+        pk (int): Match ID.
+
+    Returns:
+    --------
+        Response: Response object.
+    """
+    match: Match = get_object_or_404(Match, pk=pk)
+    serializer = MatchPlayerJoin(data=request.data, context={"match": match})
+    serializer.is_valid(raise_exception=True)
+    interaction_user_id = serializer.validated_data.get("interaction_user_id")
+
+    discord_user = DiscordUser.objects.get(user_id=interaction_user_id)
+
+    player = Player.objects.get(discord_user=discord_user)
+    match.add_player_to_match(player)
+    if match.team1.players.count() + match.team2.players.count() == match.config.max_players:
+        match.start_match()
+    match_serializer = MatchSerializer(match, context={"request": request})
+    return Response(match_serializer.data, status=200)
+
+
+def leave_match(request: Request, pk: int) -> Response:
+    """
+    Leave a match.
+
+    Args:
+    -----
+        request (Request): Request object.
+        pk (int): Match ID.
+
+    Returns:
+    --------
+        Response: Response object.
+    """
+    match: Match = get_object_or_404(Match, pk=pk)
+    serializer = MatchPlayerLeave(data=request.data, context={"match": match})
+    serializer.is_valid(raise_exception=True)
+    interaction_user_id = serializer.validated_data.get("interaction_user_id")
+    discord_user = DiscordUser.objects.get(user_id=interaction_user_id)
+    player = Player.objects.get(discord_user=discord_user)
+    match.remove_player_from_match(player)
+    match_serializer = MatchSerializer(match, context={"request": request})
+    return Response(match_serializer.data, status=200)

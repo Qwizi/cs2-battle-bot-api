@@ -15,4 +15,4 @@ echo -e "${GREEN}Superuser ${RED}$DJANGO_SUPERUSER_USERNAME ${NC}created"
 
 # Create the API key
 API_KEY=$(python manage.py shell -c "from rest_framework_api_key.models import APIKey; api_key, key = APIKey.objects.create_key(name='cs2-battle-bot'); print(key);")
-echo -e "${GREEN}Api key created: ${RED}$API_KEY${NC}"
+echo -e "${GREEN}Api key created: ${RED}$API_KEY${NC}. Put this key to the .env file as API_KEY variable. You will not be able to see it again."
