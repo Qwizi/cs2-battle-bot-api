@@ -3,10 +3,11 @@ import math
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Q
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from prefix_id import PrefixIDField
 
+from guilds.models import Embed, EmbedField
 from players.models import Team, Player
 
 UserModel = get_user_model()
@@ -93,7 +94,8 @@ class MatchConfig(models.Model):
     clinch_series = models.BooleanField(default=False)
     max_players = models.PositiveIntegerField(default=10)
     cvars = models.JSONField(null=True, blank=True)
-    guild = models.ForeignKey("guilds.Guild", on_delete=models.CASCADE, related_name="match_configs", null=True, blank=True)
+    guild = models.ForeignKey("guilds.Guild", on_delete=models.CASCADE, related_name="match_configs", null=True,
+                              blank=True)
     shuffle_teams = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -114,25 +116,25 @@ class MatchManager(models.Manager):
 # Create your models here.
 class Match(models.Model):
     objects = MatchManager()
-
     status = models.CharField(
         max_length=255, choices=MatchStatus.choices, default=MatchStatus.CREATED
     )
     config = models.ForeignKey(MatchConfig, on_delete=models.CASCADE, related_name="matches", null=True, blank=True)
     team1 = models.ForeignKey(
-        Team, on_delete=models.CASCADE, related_name="matches_team1", null=True, blank=True
+        "players.Team", on_delete=models.CASCADE, related_name="matches_team1", null=True, blank=True
     )
     team2 = models.ForeignKey(
-        Team, on_delete=models.CASCADE, related_name="matches_team2", null=True, blank=True
+        "players.Team", on_delete=models.CASCADE, related_name="matches_team2", null=True, blank=True
     )
     winner_team = models.ForeignKey(
-        Team, on_delete=models.CASCADE, related_name="matches_winner", null=True, blank=True
+        "players.Team", on_delete=models.CASCADE, related_name="matches_winner", null=True, blank=True
     )
     map_bans = models.ManyToManyField(MapBan, related_name="matches_map_bans", blank=True)
     map_picks = models.ManyToManyField(
         MapPick, related_name="matches_map_picks", blank=True
     )
-    last_map_ban = models.ForeignKey(MapBan, on_delete=models.CASCADE, related_name="matches_last_map_ban", null=True, blank=True)
+    last_map_ban = models.ForeignKey(MapBan, on_delete=models.CASCADE, related_name="matches_last_map_ban", null=True,
+                                     blank=True)
     last_map_pick = models.ForeignKey(MapPick, on_delete=models.CASCADE, related_name="matches_last_map_pick",
                                       null=True, blank=True)
     maplist = models.JSONField(null=True, blank=True)
@@ -143,6 +145,7 @@ class Match(models.Model):
         "servers.Server", on_delete=models.CASCADE, related_name="matches", null=True, blank=True
     )
     guild = models.ForeignKey("guilds.Guild", on_delete=models.CASCADE, related_name="matches", null=True, blank=True)
+    embed = models.ForeignKey("guilds.Embed", on_delete=models.CASCADE, related_name="matches", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -261,14 +264,40 @@ class Match(models.Model):
         self.team2.name = f"team_{self.team2.leader.steam_user.username}"
         self.team2.save()
 
-    def add_player_to_match(self, player):
-        if self.team1.players.count() < self.team2.players.count():
-            self.team1.players.add(player)
-        elif self.team2.players.count() < self.team1.players.count():
-            self.team2.players.add(player)
+    def add_player_to_match(self, player, team: str = None):
+        if team:
+            if team == "team1":
+                self.team1.players.add(player)
+            elif team == "team2":
+                self.team2.players.add(player)
         else:
-            self.team1.players.add(player)
+            if self.team1.players.count() < self.team2.players.count():
+                self.team1.players.add(player)
+                self.embed.fields.get(name="Team 1").value = f"""
+                        ```
+                        Name: {self.team1.name}
+                        Captain: {self.team1.leader.player.discord_user.username if self.team1.leader else "No captain"}
+                        ```
+                        ```
+                        {[player.discord_user.username for player in self.team1.players.all() if self.team1.players.count() > 0]}
+                        ```
+                        """
+            elif self.team2.players.count() < self.team1.players.count():
+                self.team2.players.add(player)
+                self.embed.fields.get(name="Team 2").value = f"""
+                                    ```
+                                    Name: {self.team2.name}
+                                    Captain: {self.team2.leader.player.discord_user.username if self.team2.leader else "No captain"}
+                                    ```
+                                    ```
+                                    {[player.discord_user.username for player in self.team2.players.all() if self.team2.players.count() > 0]}
+                                    ```
+                                    """
+            else:
+                self.team1.players.add(player)
+        self.embed.save()
         self.save()
+
         return self
 
     def remove_player_from_match(self, player):
@@ -283,10 +312,14 @@ class Match(models.Model):
         self.status = MatchStatus.STARTED
         if self.config.shuffle_teams:
             self.shuffle_players()
+        else:
+            self.team1.leader = self.team1.players.first()
+            self.team1.save()
+            self.team2.leader = self.team2.players.first()
+            self.team2.save()
         self.change_teams_name()
         self.save()
         return self
-
 
 
 @receiver(post_save, sender=Match)
@@ -300,4 +333,119 @@ def match_post_save(sender, instance, created, **kwargs):
 
         instance.team1 = team1
         instance.team2 = team2
+
+        print(f"Created {team1}")
+        print(f"Created {team2}")
+
+        # create embed
+        embed = Embed.objects.create(
+            title=f"Match {instance.pk} - {instance.config.name}",
+            description=f"""
+            ```
+            Config: {instance.config.name}
+            Type: {instance.config.type}
+            Status: {instance.status}
+            Game mode: {instance.config.game_mode}
+            Map Pool: {instance.config.map_pool.name if instance.config.map_pool else "No map pool"}
+            Max Players: {instance.config.max_players}
+            Map Sides: {instance.config.map_sides}
+            Clinch Series: {instance.config.clinch_series}
+            Custom cvars: {instance.config.cvars if instance.config.cvars else "No custom cvars"}
+            ```
+            """,
+            author=instance.author.username,
+            footer=f"{instance.pk} {instance.created_at}"
+        )
+        team1_players = [player.discord_user.username for player in team1.players.all()]
+        team2_players = [player.discord_user.username for player in team2.players.all()]
+        team1_players_str = "\n".join(team1_players)
+        team2_players_str = "\n".join(team2_players)
+
+        fields = [
+            EmbedField.objects.create(
+                order=1,
+                name="Team 1",
+                value=f"""
+                ```
+                Name: {instance.team1.name}
+                Captain: {instance.team1.leader.discord_user.username if instance.team1.leader else "No captain"}
+                ```
+                ```
+                {team1_players_str}
+                ```
+                """,
+                inline=True
+            ),
+            EmbedField.objects.create(
+                order=2,
+                name="Team 2",
+                value=f"""
+                ```
+                Name: {instance.team2.name}
+                Captain: {instance.team2.leader.discord_user.username if instance.team2.leader else "No captain"}
+                ```
+                ```
+                {team2_players_str}
+                ```
+                """,
+                inline=True
+            )
+        ]
+        embed.fields.set(fields)
+        instance.embed = embed
         instance.save()
+    else:
+        print("Match updated")
+        print(f"Team 1 {instance.team1.players.count()}")
+        print(f"Team 2 {instance.team2.players.count()}")
+        instance.embed.title = f"Match {instance.pk}"
+        instance.embed.description = f"""
+            ```
+            Config: {instance.config.name}
+            Type: {instance.config.type}
+            Status: {instance.status}
+            Game mode: {instance.config.game_mode}
+            Map Pool: {instance.config.map_pool.name if instance.config.map_pool else "No map pool"}
+            Max Players: {instance.config.max_players}
+            Map Sides: {instance.config.map_sides}
+            Clinch Series: {instance.config.clinch_series}
+            Custom cvars: {instance.config.cvars if instance.config.cvars else "No custom cvars"}
+            ```
+            """
+
+        team1_players = [player.discord_user.username for player in instance.team1.players.all()]
+        team2_players = [player.discord_user.username for player in instance.team2.players.all()]
+        team1_players_str = "\n".join(team1_players)
+        team2_players_str = "\n".join(team2_players)
+
+        team1_field = instance.embed.fields.get(name="Team 1")
+        team1_field.value = f"""
+        ```
+        Name: {instance.team1.name}
+        Captain: {instance.team1.leader.discord_user.username if instance.team1.leader else "No captain"}
+        ```
+        ```
+        {team1_players_str}
+        ```
+        """
+        team1_field.save()
+        team2_field = instance.embed.fields.get(name="Team 2")
+        team2_field.value = f"""
+        ```
+        Name: {instance.team2.name}
+        Captain: {instance.team2.leader.discord_user.username if instance.team2.leader else "No captain"}
+        ```
+        ```
+        {team2_players_str}
+        ```
+        """
+        team2_field.save()
+        if instance.status == MatchStatus.STARTED:
+            if instance.server:
+                server_detail_field = EmbedField.objects.create(
+                    order=instance.embed.fields.last().order + 1,
+                    name="Server details",
+                    value=f"```{instance.get_connect_command()}```"
+                )
+                instance.embed.fields.add(server_detail_field)
+        instance.embed.save()

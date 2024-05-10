@@ -205,10 +205,10 @@ def create_match(request: Request) -> Response:
     author_id = serializer.validated_data.get("author_id")
     server_id = serializer.validated_data.get("server_id")
     guild_id = serializer.validated_data.get("guild_id")
-    config_id = serializer.validated_data.get("config_id")
+    config_name = serializer.validated_data.get("config_name")
     author = DiscordUser.objects.get(user_id=author_id)
     guild = Guild.objects.get(guild_id=guild_id)
-    config = MatchConfig.objects.get(id=config_id)
+    config = MatchConfig.objects.get(name=config_name)
 
     server = None
     if server_id:
@@ -217,11 +217,9 @@ def create_match(request: Request) -> Response:
         config=config,
         author=author,
         guild=guild,
+        server=server
     )
     new_match.create_webhook_cvars(webhook_url=str(reverse_lazy("match-webhook", args=[new_match.pk], request=request)))
-    if server:
-        new_match.server = server
-        new_match.save()
     new_match_serializer = MatchSerializer(new_match, context={"request": request})
     return Response(new_match_serializer.data, status=201)
 
@@ -624,11 +622,12 @@ def join_match(request: Request, pk: int) -> Response:
     serializer = MatchPlayerJoin(data=request.data, context={"match": match})
     serializer.is_valid(raise_exception=True)
     interaction_user_id = serializer.validated_data.get("interaction_user_id")
+    team = serializer.validated_data.get("team")
 
     discord_user = DiscordUser.objects.get(user_id=interaction_user_id)
 
     player = Player.objects.get(discord_user=discord_user)
-    match.add_player_to_match(player)
+    match.add_player_to_match(player, team)
     if match.team1.players.count() + match.team2.players.count() == match.config.max_players:
         match.start_match()
     match_serializer = MatchSerializer(match, context={"request": request})

@@ -4,9 +4,9 @@ from rest_framework import serializers
 from rest_framework.reverse import reverse_lazy
 
 from guilds.models import Guild
-from guilds.serializers import GuildSerializer
+from guilds.serializers import GuildSerializer, EmbedSerializer
 from matches.models import Map, MapBan, MapPick, Match, MatchType, MatchStatus, MatchConfig, MapPool
-from matches.validators import ValidDiscordUser, DiscordUserCanJoinMatch, DiscordUserCanLeaveMatch
+from matches.validators import ValidDiscordUser, DiscordUserCanJoinMatch, DiscordUserCanLeaveMatch, TeamCanBeJoined
 from players.models import DiscordUser
 from players.serializers import TeamSerializer, DiscordUserSerializer
 from servers.models import Server
@@ -95,12 +95,12 @@ class MatchSerializer(serializers.ModelSerializer):
     guild = GuildSerializer(read_only=True)
     matchzy_config_url = serializers.SerializerMethodField(method_name="get_matchzy_config_url")
     matchzy_config = serializers.SerializerMethodField(method_name="get_matchzy_config")
-
     webhook_url = serializers.SerializerMethodField(method_name="get_webhook_url")
     connect_command = serializers.CharField(
         read_only=True, source="get_connect_command"
     )
     load_match_command = serializers.SerializerMethodField(method_name="get_load_match_command")
+    embed = EmbedSerializer(read_only=True, allow_null=True)
 
     def get_matchzy_config_url(self, obj) -> str:
         return reverse_lazy("match-config", args=[obj.id], request=self.context["request"])
@@ -140,14 +140,14 @@ class MatchUpdateSerializer(serializers.Serializer):
 
 
 class CreateMatchSerializer(serializers.Serializer):
-    config_id = serializers.CharField(required=True)
+    config_name = serializers.CharField(required=True)
     author_id = serializers.CharField(required=True)
     server_id = serializers.CharField(required=False)
     guild_id = serializers.CharField(required=True)
 
-    def validate_config_id(self, value):
-        if not MatchConfig.objects.filter(id=value).exists():
-            raise serializers.ValidationError(f"MatchConfig with id {value} does not exist")
+    def validate_config_name(self, value):
+        if not MatchConfig.objects.filter(name=value).exists():
+            raise serializers.ValidationError(f"MatchConfig with name {value} does not exist")
         return value
 
     def validate_author_id(self, value):
@@ -260,6 +260,7 @@ class MatchPickMapResultSerializer(serializers.Serializer):
 class MatchPlayerJoin(serializers.Serializer):
     interaction_user_id = serializers.CharField(required=True,
                                                 validators=[ValidDiscordUser(), DiscordUserCanJoinMatch()])
+    team = serializers.CharField(required=False, validators=[TeamCanBeJoined(interaction_user_id)])
 
 
 class MatchPlayerLeave(serializers.Serializer):

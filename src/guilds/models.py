@@ -1,12 +1,40 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from prefix_id import PrefixIDField
-from rest_framework_api_key.models import AbstractAPIKey
 
 from players.models import DiscordUser, Player
 
 UserModel = get_user_model()
+
+
+class EmbedField(models.Model):
+    id = PrefixIDField(primary_key=True, prefix="embed_field")
+    order = models.IntegerField(default=1)
+    name = models.CharField(max_length=255, null=True, blank=True)
+    value = models.CharField(max_length=255, null=True, blank=True)
+    inline = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class Embed(models.Model):
+    id = PrefixIDField(primary_key=True, prefix="embed")
+    title = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    color = models.CharField(max_length=255, null=True, blank=True)
+    footer = models.CharField(max_length=255, null=True, blank=True)
+    image = models.CharField(max_length=255, null=True, blank=True)
+    thumbnail = models.CharField(max_length=255, null=True, blank=True)
+    author = models.CharField(max_length=255, null=True, blank=True)
+    fields = models.ManyToManyField(EmbedField, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
 
 
 # Create your models here.
@@ -35,8 +63,43 @@ class Guild(models.Model):
     lobby_channel = models.CharField(max_length=255, null=True, blank=True)
     team1_channel = models.CharField(max_length=255, null=True, blank=True)
     team2_channel = models.CharField(max_length=255, null=True, blank=True)
+    embed = models.ForeignKey(Embed, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
+
+
+@receiver(post_save, sender=Guild)
+def create_guild(sender, instance, created, **kwargs):
+    if created:
+        embed = Embed.objects.create(
+            title=f"Guild configuration {instance.name}",
+            author=instance.owner.player.discord_user.username
+        )
+        fields = [
+            EmbedField.objects.create(
+                name="Lobby Channel",
+                value=f"@<{instance.lobby_channel}"
+            ),
+            EmbedField.objects.create(
+                name="Team 1 Channel",
+                value=f"@<{instance.team1_channel}"
+            ),
+            EmbedField.objects.create(
+                name="Team 2 Channel",
+                value=f"@<{instance.team2_channel}"
+            )
+        ]
+        embed.fields.set(fields)
+        instance.embed = embed
+        instance.save()
+    else:
+        instance.embed.title = f"Guild configuration {instance.name}"
+        instance.embed.author = instance.owner.player.discord_user.username
+        instance.embed.save()
+        instance.embed.fields.get(name="Lobby Channel").value = f"@<{instance.lobby_channel}"
+        instance.embed.fields.get(name="Team 1 Channel").value = f"@<{instance.team1_channel}"
+        instance.embed.fields.get(name="Team 2 Channel").value = f"@<{instance.team2_channel}"
+        instance.embed.save()

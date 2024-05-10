@@ -26,6 +26,30 @@ class DiscordUserCanJoinMatch(object):
         if (match.team1.players.count() + match.team2.players.count()) >= match.config.max_players:
             raise serializers.ValidationError("Match is full")
 
+        if match.author.user_id == value:
+            raise serializers.ValidationError(f"DiscordUser @<{value}> is author of the match and cannot join")
+
+
+class TeamCanBeJoined(object):
+    requires_context = True
+
+    def __init__(self, interaction_user_id):
+        self.interaction_user_id = interaction_user_id
+
+    def __call__(self, value, serializer_field):
+        if value not in ["team1", "team2"]:
+            raise serializers.ValidationError("Team must be either 'team1' or 'team2'")
+
+        match = serializer_field.context.get("match")
+
+        if value == "team1" and match.team1.players.count() >= match.config.max_players // 2:
+            raise serializers.ValidationError("Team1 is full")
+        if value == "team2" and match.team2.players.count() >= match.config.max_players // 2:
+            raise serializers.ValidationError("Team2 is full")
+        if match.team1.players.filter(discord_user__user_id=self.interaction_user_id).exists() or \
+                match.team2.players.filter(discord_user__user_id=self.interaction_user_id).exists():
+            raise serializers.ValidationError("Player is already in a team")
+
 
 class DiscordUserCanLeaveMatch(object):
     requires_context = True
