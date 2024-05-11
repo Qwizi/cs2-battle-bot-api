@@ -15,7 +15,9 @@ UserModel = get_user_model()
 
 class MatchStatus(models.TextChoices):
     CREATED = "CREATED"
-    STARTED = "STARTED"
+    CAPTAINS_SELECT = "CAPTAINS_SELECT"
+    MAP_VETO = "MAP_VETO"
+    READY_TO_LOAD = "READY_TO_LOAD"
     LOADED = "LOADED"
     LIVE = "LIVE"
     FINISHED = "FINISHED"
@@ -133,9 +135,9 @@ class Match(models.Model):
     map_picks = models.ManyToManyField(
         MapPick, related_name="matches_map_picks", blank=True
     )
-    last_map_ban = models.ForeignKey(MapBan, on_delete=models.CASCADE, related_name="matches_last_map_ban", null=True,
+    last_map_ban = models.ForeignKey(MapBan, on_delete=models.SET_NULL, related_name="matches_last_map_ban", null=True,
                                      blank=True)
-    last_map_pick = models.ForeignKey(MapPick, on_delete=models.CASCADE, related_name="matches_last_map_pick",
+    last_map_pick = models.ForeignKey(MapPick, on_delete=models.SET_NULL, related_name="matches_last_map_pick",
                                       null=True, blank=True)
     maplist = models.JSONField(null=True, blank=True)
     cvars = models.JSONField(null=True, blank=True)
@@ -149,6 +151,9 @@ class Match(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return f"<{self.status} - {self.config.name} - {self.pk}>"
+
     @property
     def api_key_header(self):
         return "Authorization"
@@ -157,8 +162,6 @@ class Match(models.Model):
     def load_match_command_name(self):
         return "matchzy_loadmatch_url"
 
-    def __str__(self):
-        return f"<{self.status} - {self.config.name} - {self.pk}>"
 
     def get_team1_players_dict(self):
         return {
@@ -218,21 +221,26 @@ class Match(models.Model):
 
         if self.config.type == MatchType.BO1:
             # 6 bans
-            map_bans_count = self.map_bans.objects.count()
+            map_bans_count = self.map_bans.count()
             # 7 maps
             map_pool_count = self.config.map_pool.maps.count() - 1
             if map_bans_count == map_pool_count:
                 # Select the last map
-                map_to_select = self.config.map_pool.maps.exclude(map_bans__match=self).first()
-                self.maplist.append(map_to_select.tag)
+                map_to_select = self.config.map_pool.maps.exclude(tag__in=self.map_bans.values_list("map__tag", flat=True)).exclude(
+            tag__in=self.map_picks.values_list("map__tag", flat=True)).first()
+                self.maplist = [map_to_select.tag]
+                self.status = MatchStatus.READY_TO_LOAD
         elif self.config.type == MatchType.BO3:
             # 4 bans
-            map_bans_count = self.map_bans.objects.count()
+            map_bans_count = self.map_bans.count()
             # 7 maps
             map_pool_count = self.config.map_pool.maps.count() - 3
             if map_bans_count == map_pool_count:
-                map_to_select = self.config.map_pool.maps.exclude(map_bans__match=self).first()
+                map_to_select = self.config.map_pool.maps.exclude(
+                    tag__in=self.map_bans.values_list("map__tag", flat=True)).exclude(
+                    tag__in=self.map_picks.values_list("map__tag", flat=True)).first()
                 self.maplist.append(map_to_select.tag)
+                self.status = MatchStatus.READY_TO_LOAD
 
         self.save()
         return self
@@ -267,8 +275,12 @@ class Match(models.Model):
     def add_player_to_match(self, player, team: str = None):
         if team:
             if team == "team1":
+                if self.team2.players.filter(id=player.id).exists():
+                    self.team2.players.remove(player)
                 self.team1.players.add(player)
             elif team == "team2":
+                if self.team1.players.filter(id=player.id).exists():
+                    self.team1.players.remove(player)
                 self.team2.players.add(player)
         else:
             if self.team1.players.count() < self.team2.players.count():
@@ -309,18 +321,47 @@ class Match(models.Model):
         return self
 
     def start_match(self):
-        self.status = MatchStatus.STARTED
         if self.config.shuffle_teams:
             self.shuffle_players()
+            self.change_teams_name()
+            self.status = MatchStatus.MAP_VETO
         else:
-            self.team1.leader = self.team1.players.first()
-            self.team1.save()
-            self.team2.leader = self.team2.players.first()
-            self.team2.save()
-        self.change_teams_name()
+            self.status = MatchStatus.CAPTAINS_SELECT
+
         self.save()
         return self
 
+    def set_team_captain(self, player, team):
+        if team == "team1":
+            print("Setting team1 captain")
+            self.team1.leader = player
+            self.team1.save()
+        elif team == "team2":
+            print("Setting team2 captain")
+            self.team2.leader = player
+            self.team2.save()
+        if self.team1.leader and self.team2.leader:
+            self.status = MatchStatus.MAP_VETO
+            self.change_teams_name()
+        self.save()
+        return self
+
+    def get_team_by_player(self, player):
+        if player in self.team1.players.all():
+            return self.team1
+        elif player in self.team2.players.all():
+            return self.team2
+        return None
+
+    def get_maps_left(self):
+        maps_left = self.config.map_pool.maps.exclude(tag__in=self.map_bans.values_list("map__tag", flat=True)).exclude(
+            tag__in=self.map_picks.values_list("map__tag", flat=True))
+        if self.config.type == MatchType.BO1 and len(maps_left) == 1:
+            return []
+        return [map.tag for map in maps_left]
+
+    def get_next_ban_team(self):
+        return self.team1 if self.last_map_ban.team == self.team2 else self.team2
 
 @receiver(post_save, sender=Match)
 def match_post_save(sender, instance, created, **kwargs):
@@ -440,7 +481,7 @@ def match_post_save(sender, instance, created, **kwargs):
         ```
         """
         team2_field.save()
-        if instance.status == MatchStatus.STARTED:
+        if instance.status == MatchStatus.READY_TO_LOAD:
             if instance.server:
                 server_detail_field = EmbedField.objects.create(
                     order=instance.embed.fields.last().order + 1,

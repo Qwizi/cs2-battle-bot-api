@@ -6,7 +6,8 @@ from rest_framework.reverse import reverse_lazy
 from guilds.models import Guild
 from guilds.serializers import GuildSerializer, EmbedSerializer
 from matches.models import Map, MapBan, MapPick, Match, MatchType, MatchStatus, MatchConfig, MapPool
-from matches.validators import ValidDiscordUser, DiscordUserCanJoinMatch, DiscordUserCanLeaveMatch, TeamCanBeJoined
+from matches.validators import ValidDiscordUser, DiscordUserCanJoinMatch, DiscordUserCanLeaveMatch, TeamCanBeJoined, \
+    DiscordUserIsInMatch, ValidMap, MapCanBeBanned
 from players.models import DiscordUser
 from players.serializers import TeamSerializer, DiscordUserSerializer
 from servers.models import Server
@@ -76,6 +77,7 @@ class MatchzyConfigSerializer(serializers.Serializer):
         )
     )
     clinch_series = serializers.BooleanField()
+    wingman = serializers.BooleanField(required=False)
     players_per_team = serializers.IntegerField()
     cvars = serializers.DictField(required=False)
 
@@ -223,8 +225,9 @@ class InteractionUserSerializer(serializers.Serializer):
     interaction_user_id = serializers.CharField(required=True, validators=[ValidDiscordUser()])
 
 
-class MatchBanMapSerializer(InteractionUserSerializer):
-    map_tag = serializers.CharField(required=True)
+class MatchBanMapSerializer(serializers.Serializer):
+    interaction_user_id = serializers.CharField(required=True, validators=[ValidDiscordUser(), DiscordUserIsInMatch()])
+    map_tag = serializers.CharField(required=True, validators=[ValidMap(), MapCanBeBanned()])
 
 
 class MatchPickMapSerializer(MatchBanMapSerializer):
@@ -232,10 +235,15 @@ class MatchPickMapSerializer(MatchBanMapSerializer):
 
 
 class MatchBanMapResultSerializer(serializers.Serializer):
+    match = serializers.SerializerMethodField(method_name="get_match")
     banned_map = serializers.SerializerMethodField(method_name="get_banned_map")
     next_ban_team = serializers.SerializerMethodField(method_name="get_next_ban_team")
     maps_left = serializers.ListField(child=serializers.CharField())
     map_bans_count = serializers.IntegerField()
+
+
+    def get_match(self, obj) -> MatchSerializer:
+        return MatchSerializer(self.context["match"], context={"request": self.context["request"]}).data
 
     def get_banned_map(self, obj) -> MapSerializer:
         return MapSerializer(self.context["banned_map"]).data
@@ -260,9 +268,26 @@ class MatchPickMapResultSerializer(serializers.Serializer):
 class MatchPlayerJoin(serializers.Serializer):
     interaction_user_id = serializers.CharField(required=True,
                                                 validators=[ValidDiscordUser(), DiscordUserCanJoinMatch()])
-    team = serializers.CharField(required=False, validators=[TeamCanBeJoined(interaction_user_id)])
+    team = serializers.CharField(required=False, validators=[TeamCanBeJoined()])
+
+    def validate_team(self, value):
+        if value not in ["team1", "team2"]:
+            raise serializers.ValidationError("Team must be either 'team1' or 'team2'")
+        return value
 
 
 class MatchPlayerLeave(serializers.Serializer):
     interaction_user_id = serializers.CharField(required=True,
-                                                validators=[ValidDiscordUser(), DiscordUserCanLeaveMatch()])
+                                                validators=[ValidDiscordUser(), DiscordUserCanLeaveMatch(),
+                                                            DiscordUserIsInMatch()])
+
+
+class MatchSelectCaptain(serializers.Serializer):
+    team = serializers.CharField(required=True)
+    interaction_user_id = serializers.CharField(required=True, validators=[ValidDiscordUser(),
+                                                                           DiscordUserIsInMatch(), ])
+
+    def validate_team(self, value):
+        if value not in ["team1", "team2"]:
+            raise serializers.ValidationError("Team must be either 'team1' or 'team2'")
+        return value
