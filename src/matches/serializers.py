@@ -1,11 +1,16 @@
 from enum import Enum
-import re
+
 from rest_framework import serializers
 from rest_framework.reverse import reverse_lazy
 
-from guilds.serializers import GuildSerializer
-from matches.models import Map, MapBan, MapPick, Match, MatchType, MatchStatus
+from guilds.models import Guild
+from guilds.serializers import GuildSerializer, EmbedSerializer
+from matches.models import Map, MapBan, MapPick, Match, MatchType, MatchStatus, MatchConfig, MapPool
+from matches.validators import ValidDiscordUser, DiscordUserCanJoinMatch, DiscordUserCanLeaveMatch, TeamCanBeJoined, \
+    DiscordUserIsInMatch, ValidMap, MapCanBeBanned
+from players.models import DiscordUser
 from players.serializers import TeamSerializer, DiscordUserSerializer
+from servers.models import Server
 from servers.serializers import ServerSerializer
 
 
@@ -23,6 +28,14 @@ class MatchEventEnum(str, Enum):
 class MapSerializer(serializers.ModelSerializer):
     class Meta:
         model = Map
+        fields = "__all__"
+
+
+class MapPoolSerializer(serializers.ModelSerializer):
+    maps = MapSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = MapPool
         fields = "__all__"
 
 
@@ -44,7 +57,15 @@ class MatchMapSelectedSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class MatchConfigSerializer(serializers.Serializer):
+class MatchConfigSerializer(serializers.ModelSerializer):
+    map_pool = MapPoolSerializer(read_only=True)
+
+    class Meta:
+        model = MatchConfig
+        fields = "__all__"
+
+
+class MatchzyConfigSerializer(serializers.Serializer):
     matchid = serializers.CharField()
     team1 = serializers.DictField()
     team2 = serializers.DictField()
@@ -56,11 +77,13 @@ class MatchConfigSerializer(serializers.Serializer):
         )
     )
     clinch_series = serializers.BooleanField()
+    wingman = serializers.BooleanField(required=False)
     players_per_team = serializers.IntegerField()
     cvars = serializers.DictField(required=False)
 
 
 class MatchSerializer(serializers.ModelSerializer):
+    config = MatchConfigSerializer(read_only=True)
     team1 = TeamSerializer(read_only=True)
     team2 = TeamSerializer(read_only=True)
     maps = MapSerializer(many=True, read_only=True)
@@ -72,27 +95,27 @@ class MatchSerializer(serializers.ModelSerializer):
     author = DiscordUserSerializer(read_only=True)
     server = ServerSerializer(read_only=True, required=False, allow_null=True)
     guild = GuildSerializer(read_only=True)
-    config_url = serializers.SerializerMethodField(method_name="get_config_url")
-    config = serializers.SerializerMethodField(method_name="get_config")
-
+    matchzy_config_url = serializers.SerializerMethodField(method_name="get_matchzy_config_url")
+    matchzy_config = serializers.SerializerMethodField(method_name="get_matchzy_config")
     webhook_url = serializers.SerializerMethodField(method_name="get_webhook_url")
     connect_command = serializers.CharField(
         read_only=True, source="get_connect_command"
     )
     load_match_command = serializers.SerializerMethodField(method_name="get_load_match_command")
+    embed = EmbedSerializer(read_only=True, allow_null=True)
 
-    def get_config_url(self, obj) -> str:
+    def get_matchzy_config_url(self, obj) -> str:
         return reverse_lazy("match-config", args=[obj.id], request=self.context["request"])
 
     def get_webhook_url(self, obj) -> str:
         return reverse_lazy("match-webhook", args=[obj.id], request=self.context["request"])
 
     def get_load_match_command(self, obj) -> str:
-        config_url = self.get_config_url(obj)
+        config_url = self.get_matchzy_config_url(obj)
         return f'{obj.load_match_command_name} "{config_url}" "{obj.api_key_header}" "Bearer {obj.get_author_token()}"'
 
-    def get_config(self, obj) -> MatchConfigSerializer:
-        return MatchConfigSerializer(obj.get_config()).data
+    def get_matchzy_config(self, obj) -> MatchConfigSerializer:
+        return MatchzyConfigSerializer(obj.get_matchzy_config()).data
 
     class Meta:
         model = Match
@@ -118,27 +141,31 @@ class MatchUpdateSerializer(serializers.Serializer):
     guild_id = serializers.CharField(required=False)
 
 
-
 class CreateMatchSerializer(serializers.Serializer):
-    discord_users_ids = serializers.ListField(child=serializers.CharField())
+    config_name = serializers.CharField(required=True)
     author_id = serializers.CharField(required=True)
     server_id = serializers.CharField(required=False)
     guild_id = serializers.CharField(required=True)
-    match_type = serializers.ChoiceField(
-        choices=MatchType.choices, default=MatchType.BO1
-    )
-    clinch_series = serializers.BooleanField(required=False, default=False)
-    map_sides = serializers.ListField(
-        child=serializers.ChoiceField(
-            choices=["team1_ct", "team2_ct", "team1_t", "team2_t", "knife"]
-        ),
-        required=False,
-        default=["knife", "knife", "knife"],
-    )
-    cvars = serializers.DictField(
-        child=serializers.CharField(required=False), required=False
-    )
-    maplist = serializers.ListField(child=serializers.CharField(), required=False)
+
+    def validate_config_name(self, value):
+        if not MatchConfig.objects.filter(name=value).exists():
+            raise serializers.ValidationError(f"MatchConfig with name {value} does not exist")
+        return value
+
+    def validate_author_id(self, value):
+        if not DiscordUser.objects.filter(user_id=value).exists():
+            raise serializers.ValidationError(f"Author[DiscordUser] with id {value} does not exist")
+        return value
+
+    def validate_server_id(self, value):
+        if value and not Server.objects.filter(id=value).exists():
+            raise serializers.ValidationError(f"Server with id {value} does not exist")
+        return value
+
+    def validate_guild_id(self, value):
+        if not Guild.objects.filter(guild_id=value).exists():
+            raise serializers.ValidationError(f"Guild with id {value} does not exist")
+        return value
 
 
 class MatchTeamWrapperSerializer(serializers.Serializer):
@@ -195,11 +222,12 @@ class MatchEventMapResultSerializer(MatchEventSerializer):
 
 
 class InteractionUserSerializer(serializers.Serializer):
-    interaction_user_id = serializers.CharField(required=True)
+    interaction_user_id = serializers.CharField(required=True, validators=[ValidDiscordUser()])
 
 
-class MatchBanMapSerializer(InteractionUserSerializer):
-    map_tag = serializers.CharField(required=True)
+class MatchBanMapSerializer(serializers.Serializer):
+    interaction_user_id = serializers.CharField(required=True, validators=[ValidDiscordUser(), DiscordUserIsInMatch()])
+    map_tag = serializers.CharField(required=True, validators=[ValidMap(), MapCanBeBanned()])
 
 
 class MatchPickMapSerializer(MatchBanMapSerializer):
@@ -207,10 +235,15 @@ class MatchPickMapSerializer(MatchBanMapSerializer):
 
 
 class MatchBanMapResultSerializer(serializers.Serializer):
+    match = serializers.SerializerMethodField(method_name="get_match")
     banned_map = serializers.SerializerMethodField(method_name="get_banned_map")
     next_ban_team = serializers.SerializerMethodField(method_name="get_next_ban_team")
     maps_left = serializers.ListField(child=serializers.CharField())
     map_bans_count = serializers.IntegerField()
+
+
+    def get_match(self, obj) -> MatchSerializer:
+        return MatchSerializer(self.context["match"], context={"request": self.context["request"]}).data
 
     def get_banned_map(self, obj) -> MapSerializer:
         return MapSerializer(self.context["banned_map"]).data
@@ -232,5 +265,29 @@ class MatchPickMapResultSerializer(serializers.Serializer):
         return TeamSerializer(self.context["next_pick_team"]).data
 
 
-class MatchPlayerJoin(InteractionUserSerializer):
-    pass
+class MatchPlayerJoin(serializers.Serializer):
+    interaction_user_id = serializers.CharField(required=True,
+                                                validators=[ValidDiscordUser(), DiscordUserCanJoinMatch()])
+    team = serializers.CharField(required=False, validators=[TeamCanBeJoined()])
+
+    def validate_team(self, value):
+        if value not in ["team1", "team2"]:
+            raise serializers.ValidationError("Team must be either 'team1' or 'team2'")
+        return value
+
+
+class MatchPlayerLeave(serializers.Serializer):
+    interaction_user_id = serializers.CharField(required=True,
+                                                validators=[ValidDiscordUser(), DiscordUserCanLeaveMatch(),
+                                                            DiscordUserIsInMatch()])
+
+
+class MatchSelectCaptain(serializers.Serializer):
+    team = serializers.CharField(required=True)
+    interaction_user_id = serializers.CharField(required=True, validators=[ValidDiscordUser(),
+                                                                           DiscordUserIsInMatch(), ])
+
+    def validate_team(self, value):
+        if value not in ["team1", "team2"]:
+            raise serializers.ValidationError("Team must be either 'team1' or 'team2'")
+        return value

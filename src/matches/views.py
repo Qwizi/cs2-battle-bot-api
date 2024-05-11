@@ -18,7 +18,8 @@ from matches.serializers import (
     MatchConfigSerializer,
     MatchMapSelectedSerializer,
     MatchSerializer, CreateMatchSerializer, MatchBanMapSerializer, MatchPickMapSerializer, MatchBanMapResultSerializer,
-    MatchPickMapResultSerializer, InteractionUserSerializer, MatchUpdateSerializer,
+    MatchPickMapResultSerializer, InteractionUserSerializer, MatchUpdateSerializer, MatchPlayerJoin, MatchPlayerLeave,
+    MatchSelectCaptain,
 )
 from matches.utils import (
     ban_map,
@@ -28,7 +29,7 @@ from matches.utils import (
     pick_map,
     process_webhook,
     recreate_match,
-    shuffle_teams,
+    shuffle_teams, leave_match, select_captain,
 )
 from players.models import Team, DiscordUser
 from servers.models import Server
@@ -156,12 +157,29 @@ class MatchViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @extend_schema(
-        request=InteractionUserSerializer,
+        request=MatchPlayerJoin,
         responses={200: MatchSerializer}
     )
     @action(detail=True, methods=["POST"])
     def join(self, request, pk):
         return join_match(request, pk)
+
+    @extend_schema(
+        request=MatchPlayerLeave,
+        responses={200: MatchSerializer}
+    )
+    @action(detail=True, methods=["POST"])
+    def leave(self, request, pk):
+        return leave_match(request, pk)
+
+
+    @extend_schema(
+        request=MatchSelectCaptain,
+        responses={200: MatchSerializer}
+    )
+    @action(detail=True, methods=["POST"])
+    def captain(self, request, pk):
+        return select_captain(request, pk)
 
     @extend_schema(
         responses={200: MatchConfigSerializer}

@@ -13,10 +13,12 @@ RUN poetry config virtualenvs.create false
 #RUN poetry config installer.no-binary cryptography
 
 # Copy the project files for dependency installation
-COPY pyproject.toml ./poetry.lock /code/
+COPY ./pyproject.toml ./poetry.lock /code/
 
 # Install project dependencies using Poetry
 RUN poetry install --no-interaction --no-ansi
+
+
 
 # Stage 2: Runtime environment
 FROM builder AS runtime
@@ -31,9 +33,11 @@ WORKDIR /app
 # Copy only the necessary files from the build stage
 COPY --from=builder /code /app
 
+COPY --from=builder /code/pyproject.toml /app/
+
+
 # Copy the source code
 COPY src /app/
-COPY scripts /app/scripts
 
 
 # Change ownership to the dedicated user
